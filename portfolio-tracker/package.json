@@ -2,10 +2,10 @@
   "name": "portfolio-tracker",
   "version": "1.0.0",
   "description": "AI驱动的持仓监控与分析系统",
-  "main": "backend/server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
     "init-db": "node backend/init-db.js"
   },
   "dependencies": {
