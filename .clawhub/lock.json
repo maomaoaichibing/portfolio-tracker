@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "tavily-search": {
+      "version": "1.0.0",
+      "installedAt": 1771636747713
+    },
+    "github": {
+      "version": "1.0.0",
+      "installedAt": 1771636749810
+    },
+    "ddg-web-search": {
+      "version": "1.0.0",
+      "installedAt": 1771636756658
+    }
+  }
+}

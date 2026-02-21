@@ -1,0 +1,105 @@
+/* 自定义样式 */
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* 表格行悬停效果 */
+.table-row-hover:hover {
+    background-color: #f9fafb;
+}
+
+/* 拖拽区域激活状态 */
+.drop-zone-active {
+    border-color: #3b82f6 !important;
+    background-color: #eff6ff !important;
+}
+
+/* 盈亏颜色 */
+.profit {
+    color: #dc2626;
+}
+
+.loss {
+    color: #16a34a;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 模态框动画 */
+.modal-enter {
+    animation: modalEnter 0.2s ease-out;
+}
+
+@keyframes modalEnter {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 加载动画 */
+.loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 标签样式 */
+.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tag-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.tag-green {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.tag-yellow {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.tag-red {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
