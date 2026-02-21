@@ -2,8 +2,8 @@
  * Portfolio Tracker - 前端应用逻辑
  */
 
-// API 基础 URL
-const API_BASE_URL = 'http://localhost:3000/api';
+// API 基础 URL - 自动检测当前端口
+const API_BASE_URL = `http://localhost:${window.location.port || 3000}/api`;
 
 // 全局状态
 let selectedFiles = [];
