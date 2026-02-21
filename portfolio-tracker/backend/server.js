@@ -337,14 +337,37 @@ app.post('/api/monitoring/refresh', async (req, res) => {
 
 function savePortfolio(portfolio) {
     portfolio.forEach(stock => {
-        db.run(`INSERT INTO portfolio (symbol, name, market, shares, avg_cost, price, currency, year_change)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(symbol) DO UPDATE SET
-                shares = excluded.shares, 
-                price = excluded.price, 
-                year_change = excluded.year_change,
-                updated_at = CURRENT_TIMESTAMP`,
-            [stock.symbol, stock.name, stock.market, stock.shares, stock.avgCost, stock.price, stock.currency, stock.year_change]);
+        // 先尝试更新，如果不存在则插入
+        db.get('SELECT id FROM portfolio WHERE symbol = ?', [stock.symbol], (err, row) => {
+            if (err) {
+                console.error('查询持仓失败:', err.message);
+                return;
+            }
+            
+            if (row) {
+                // 更新现有记录
+                db.run(`UPDATE portfolio SET 
+                    shares = ?, 
+                    price = ?, 
+                    year_change = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                    WHERE symbol = ?`,
+                    [stock.shares, stock.price, stock.year_change, stock.symbol],
+                    (err) => {
+                        if (err) console.error('更新持仓失败:', err.message);
+                    }
+                );
+            } else {
+                // 插入新记录
+                db.run(`INSERT INTO portfolio (symbol, name, market, shares, avg_cost, price, currency, year_change)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [stock.symbol, stock.name, stock.market, stock.shares, stock.avgCost, stock.price, stock.currency, stock.year_change],
+                    (err) => {
+                        if (err) console.error('插入持仓失败:', err.message);
+                    }
+                );
+            }
+        });
     });
 }
 
@@ -355,27 +378,58 @@ function saveStockAnalysis(symbol, analysis) {
             symbol,
             analysis.year_change,
             analysis.trend_summary,
-            JSON.stringify(analysis.key_drivers),
-            JSON.stringify(analysis.risk_factors),
-            JSON.stringify(analysis.monitoring_checklist)
-        ]);
+            JSON.stringify(analysis.key_drivers || []),
+            JSON.stringify(analysis.risk_factors || []),
+            JSON.stringify(analysis.monitoring_checklist || [])
+        ],
+        (err) => {
+            if (err) console.error('保存分析失败:', err.message);
+        }
+    );
 }
 
 function saveMonitoringMetrics(metrics) {
     metrics.forEach(m => {
-        db.run(`INSERT INTO monitoring (symbol, metric_name, metric_type, description, threshold_value)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(symbol, metric_name) DO UPDATE SET
-                description = excluded.description,
-                threshold_value = excluded.threshold_value`,
-            [m.symbol, m.metric, m.type, m.description, m.threshold]);
+        db.get('SELECT id FROM monitoring WHERE symbol = ? AND metric_name = ?', 
+            [m.symbol, m.metric], 
+            (err, row) => {
+                if (err) {
+                    console.error('查询监控指标失败:', err.message);
+                    return;
+                }
+                
+                if (row) {
+                    db.run(`UPDATE monitoring SET 
+                        description = ?,
+                        threshold_value = ?
+                        WHERE id = ?`,
+                        [m.description, m.threshold, row.id],
+                        (err) => {
+                            if (err) console.error('更新监控指标失败:', err.message);
+                        }
+                    );
+                } else {
+                    db.run(`INSERT INTO monitoring (symbol, metric_name, metric_type, description, threshold_value)
+                        VALUES (?, ?, ?, ?, ?)`,
+                        [m.symbol, m.metric, m.type, m.description, m.threshold],
+                        (err) => {
+                            if (err) console.error('插入监控指标失败:', err.message);
+                        }
+                    );
+                }
+            }
+        );
     });
 }
 
 function saveAlert(alert) {
     db.run(`INSERT INTO alerts (symbol, alert_type, priority, title, content)
             VALUES (?, ?, ?, ?, ?)`,
-        [alert.symbol, alert.alert_type, alert.priority, alert.title, alert.content]);
+        [alert.symbol, alert.alert_type, alert.priority, alert.title, alert.content],
+        (err) => {
+            if (err) console.error('保存提醒失败:', err.message);
+        }
+    );
 }
 
 // ============ 监控提醒 API ============
