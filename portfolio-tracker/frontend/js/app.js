@@ -13,6 +13,7 @@ let portfolioData = [];
 document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
     loadPortfolio();
+    loadAlerts();
 });
 
 // 初始化事件监听
@@ -523,6 +524,109 @@ function deleteStock(id) {
     }
 }
 
+// 加载监控提醒
+async function loadAlerts() {
+    const container = document.getElementById('alertsContainer');
+    if (!container) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/alerts?unreadOnly=true`);
+        const data = await response.json();
+        
+        if (data.alerts && data.alerts.length > 0) {
+            container.innerHTML = data.alerts.slice(0, 5).map(alert => `
+                <div class="flex items-start space-x-3 p-3 bg-${alert.priority === 'high' ? 'red' : alert.priority === 'medium' ? 'yellow' : 'blue'}-50 rounded-lg mb-2">
+                    <div class="flex-shrink-0">
+                        ${alert.priority === 'high' ? '🔴' : alert.priority === 'medium' ? '🟡' : '🟢'}
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">${alert.title}</p>
+                        <p class="text-xs text-gray-500 mt-1">${alert.content}</p>
+                        <p class="text-xs text-gray-400 mt-1">${new Date(alert.created_at).toLocaleString('zh-CN')}</p>
+                    </div>
+                    <button onclick="markAlertRead(${alert.id})" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p>暂无未读提醒</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('加载提醒失败:', error);
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <p>加载提醒失败</p>
+            </div>
+        `;
+    }
+}
+
+// 标记提醒为已读
+async function markAlertRead(id) {
+    try {
+        await fetch(`${API_BASE_URL}/alerts/${id}/read`, {
+            method: 'POST'
+        });
+        loadAlerts();
+        showToast('已标记为已读');
+    } catch (error) {
+        console.error('标记已读失败:', error);
+    }
+}
+
+// 手动检查监控
+async function checkMonitoring() {
+    showToast('正在检查监控指标...');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/monitoring/check`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`检查完成，触发 ${result.alertsTriggered} 条提醒`);
+            loadAlerts();
+        } else {
+            showToast('检查失败', 'error');
+        }
+    } catch (error) {
+        console.error('检查失败:', error);
+        showToast('检查失败，请检查服务是否启动', 'error');
+    }
+}
+
+// 发送每日报告到飞书
+async function sendDailyReport() {
+    showToast('正在生成并发送日报...');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/feishu/daily-report`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('日报已发送到飞书');
+        } else {
+            showToast('发送失败: ' + (result.error || '未知错误'), 'error');
+        }
+    } catch (error) {
+        console.error('发送日报失败:', error);
+        showToast('发送失败，请检查服务是否启动', 'error');
+    }
+}
+
 // 显示 Toast 通知
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -557,3 +661,7 @@ window.hideDetailModal = hideDetailModal;
 window.analyzeStock = analyzeStock;
 window.hideAnalysisModal = hideAnalysisModal;
 window.deleteStock = deleteStock;
+window.loadAlerts = loadAlerts;
+window.markAlertRead = markAlertRead;
+window.checkMonitoring = checkMonitoring;
+window.sendDailyReport = sendDailyReport;
