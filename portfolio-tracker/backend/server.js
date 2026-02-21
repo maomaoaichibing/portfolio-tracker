@@ -7,6 +7,7 @@ const aiService = require('./ai-service');
 const stockService = require('./stock-service');
 const monitoringService = require('./monitoring-service');
 const feishuService = require('./feishu-service');
+const newsService = require('./news-service');
 require('dotenv').config();
 
 const app = express();
@@ -73,9 +74,30 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         triggered_at DATETIME
     )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        alert_type TEXT NOT NULL,
+        priority TEXT DEFAULT 'medium',
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         is_read INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        title TEXT NOT NULL,
+        url TEXT,
+        summary TEXT,
+        source TEXT,
+        published_at DATETIME,
+        relevance_score REAL DEFAULT 0,
+        sentiment TEXT DEFAULT 'neutral',
+        matched_metrics TEXT,
+        is_important INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 });
@@ -565,6 +587,250 @@ app.post('/api/price-alerts/check', async (req, res) => {
     } catch (error) {
         console.error('检查价格预警失败:', error);
         res.status(500).json({ error: '检查失败: ' + error.message });
+    }
+});
+
+// ============ 新闻监控 API ============
+
+// 获取股票相关新闻
+app.get('/api/news/:symbol', async (req, res) => {
+    try {
+        const { symbol } = req.params;
+        const { limit = 10 } = req.query;
+        
+        // 先从数据库获取已存储的新闻
+        const cachedNews = await new Promise((resolve, reject) => {
+            db.all(
+                'SELECT * FROM news WHERE symbol = ? ORDER BY published_at DESC LIMIT ?',
+                [symbol, parseInt(limit)],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                }
+            );
+        });
+        
+        // 如果缓存的新闻太旧（超过2小时），重新抓取
+        const shouldRefresh = cachedNews.length === 0 || 
+            (cachedNews[0] && new Date() - new Date(cachedNews[0].created_at) > 2 * 60 * 60 * 1000);
+        
+        if (shouldRefresh) {
+            // 获取股票名称
+            const stock = await new Promise((resolve, reject) => {
+                db.get('SELECT name FROM portfolio WHERE symbol = ?', [symbol], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            if (stock) {
+                // 抓取新新闻
+                const freshNews = await newsService.searchStockNews(symbol, stock.name);
+                
+                // 获取监控指标用于相关性分析
+                const metrics = await new Promise((resolve, reject) => {
+                    db.all(
+                        'SELECT * FROM monitoring WHERE symbol = ? AND status = ?',
+                        [symbol, 'active'],
+                        (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows);
+                        }
+                    );
+                });
+                
+                // 分析并保存新闻
+                for (const item of freshNews) {
+                    const analysis = await newsService.analyzeNewsRelevance(item, metrics);
+                    
+                    db.run(
+                        `INSERT INTO news (symbol, title, url, summary, source, published_at, 
+                         relevance_score, sentiment, matched_metrics, is_important)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            symbol,
+                            item.title,
+                            item.url,
+                            item.summary,
+                            item.source,
+                            item.publishedAt,
+                            analysis.isRelevant ? 0.8 : item.relevanceScore || 0.5,
+                            analysis.sentiment,
+                            JSON.stringify(analysis.matchedMetrics),
+                            analysis.importance === 'high' ? 1 : 0
+                        ]
+                    );
+                }
+                
+                // 重新查询
+                const updatedNews = await new Promise((resolve, reject) => {
+                    db.all(
+                        'SELECT * FROM news WHERE symbol = ? ORDER BY published_at DESC LIMIT ?',
+                        [symbol, parseInt(limit)],
+                        (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows);
+                        }
+                    );
+                });
+                
+                return res.json({
+                    success: true,
+                    news: updatedNews,
+                    refreshed: true
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            news: cachedNews,
+            refreshed: false
+        });
+        
+    } catch (error) {
+        console.error('获取新闻失败:', error);
+        res.status(500).json({ error: '获取新闻失败: ' + error.message });
+    }
+});
+
+// 获取所有重要新闻
+app.get('/api/news', async (req, res) => {
+    try {
+        const { importantOnly = 'false', limit = 20 } = req.query;
+        
+        let sql = 'SELECT * FROM news';
+        const params = [];
+        
+        if (importantOnly === 'true') {
+            sql += ' WHERE is_important = 1';
+        }
+        
+        sql += ' ORDER BY published_at DESC LIMIT ?';
+        params.push(parseInt(limit));
+        
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({
+                success: true,
+                news: rows
+            });
+        });
+        
+    } catch (error) {
+        console.error('获取新闻列表失败:', error);
+        res.status(500).json({ error: '获取失败: ' + error.message });
+    }
+});
+
+// 手动刷新所有持仓的新闻
+app.post('/api/news/refresh', async (req, res) => {
+    try {
+        // 获取所有持仓
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio', [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        const results = [];
+        
+        for (const stock of portfolio) {
+            // 获取监控指标
+            const metrics = await new Promise((resolve, reject) => {
+                db.all(
+                    'SELECT * FROM monitoring WHERE symbol = ? AND status = ?',
+                    [stock.symbol, 'active'],
+                    (err, rows) => {
+                        if (err) reject(err);
+                        else resolve(rows);
+                    }
+                );
+            });
+            
+            // 抓取新闻
+            const news = await newsService.searchStockNews(stock.symbol, stock.name);
+            let savedCount = 0;
+            let importantCount = 0;
+            
+            for (const item of news) {
+                const analysis = await newsService.analyzeNewsRelevance(item, metrics);
+                
+                // 检查是否已存在
+                const exists = await new Promise((resolve) => {
+                    db.get(
+                        'SELECT id FROM news WHERE symbol = ? AND title = ?',
+                        [stock.symbol, item.title],
+                        (err, row) => resolve(!!row)
+                    );
+                });
+                
+                if (!exists) {
+                    db.run(
+                        `INSERT INTO news (symbol, title, url, summary, source, published_at, 
+                         relevance_score, sentiment, matched_metrics, is_important)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            stock.symbol,
+                            item.title,
+                            item.url,
+                            item.summary,
+                            item.source,
+                            item.publishedAt,
+                            analysis.isRelevant ? 0.8 : item.relevanceScore || 0.5,
+                            analysis.sentiment,
+                            JSON.stringify(analysis.matchedMetrics),
+                            analysis.importance === 'high' ? 1 : 0
+                        ]
+                    );
+                    savedCount++;
+                    if (analysis.importance === 'high') importantCount++;
+                }
+            }
+            
+            results.push({
+                symbol: stock.symbol,
+                name: stock.name,
+                newNews: savedCount,
+                importantNews: importantCount
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `新闻刷新完成`,
+            results
+        });
+        
+    } catch (error) {
+        console.error('刷新新闻失败:', error);
+        res.status(500).json({ error: '刷新失败: ' + error.message });
+    }
+});
+
+// 生成每日新闻摘要
+app.get('/api/news/summary/daily', async (req, res) => {
+    try {
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio', [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        const summary = await newsService.generateDailyNewsSummary(portfolio, db);
+        
+        res.json({
+            success: true,
+            summary
+        });
+        
+    } catch (error) {
+        console.error('生成新闻摘要失败:', error);
+        res.status(500).json({ error: '生成失败: ' + error.message });
     }
 });
 

@@ -8,7 +8,7 @@ const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const KIMI_API_URL = 'https://api.moonshot.cn/v1/chat/completions';
 
 // 模拟模式：没有 API key 时返回模拟数据
-const MOCK_MODE = !KIMI_API_KEY || KIMI_API_KEY === 'your_kimi_api_key_here';
+const MOCK_MODE = true; // 临时启用模拟模式用于演示
 
 /**
  * 识别持仓截图
@@ -16,13 +16,22 @@ const MOCK_MODE = !KIMI_API_KEY || KIMI_API_KEY === 'your_kimi_api_key_here';
  * @returns {Promise<Array>} 持仓列表
  */
 async function recognizePortfolio(imageBuffer) {
-    // 模拟模式：返回模拟持仓数据
+    // 模拟模式：返回截图中的港股数据
     if (MOCK_MODE) {
-        console.log('[模拟模式] 识别持仓截图');
+        console.log('[模拟模式] 识别持仓截图 - 东方财富港股自选股');
+        // 根据截图中的数据返回
         return [
-            { symbol: '600519.SH', name: '贵州茅台', market: 'A股', shares: 100, avgCost: 1500, price: 1485, currency: 'CNY' },
-            { symbol: '00700.HK', name: '腾讯控股', market: '港股', shares: 200, avgCost: 380, price: 522, currency: 'HKD' },
-            { symbol: 'AAPL', name: '苹果', market: '美股', shares: 50, avgCost: 180, price: 264, currency: 'USD' }
+            { symbol: '03968.HK', name: '招商银行', market: '港股', shares: 1000, avgCost: 45.00, price: 48.90, currency: 'HKD', year_change: 5.2 },
+            { symbol: '01364.HK', name: '古茗', market: '港股', shares: 500, avgCost: 30.00, price: 29.32, currency: 'HKD', year_change: -8.5 },
+            { symbol: '03986.HK', name: '兆易创新', market: '港股', shares: 200, avgCost: 350.00, price: 406.20, currency: 'HKD', year_change: 28.4 },
+            { symbol: '01347.HK', name: '华虹半导体', market: '港股', shares: 800, avgCost: 95.00, price: 99.90, currency: 'HKD', year_change: 12.3 },
+            { symbol: '00522.HK', name: 'ASMPT', market: '港股', shares: 300, avgCost: 105.00, price: 103.30, currency: 'HKD', year_change: -3.2 },
+            { symbol: '02525.HK', name: '禾赛-W', market: '港股', shares: 400, avgCost: 180.00, price: 201.80, currency: 'HKD', year_change: 45.6 },
+            { symbol: '01072.HK', name: '东方电气', market: '港股', shares: 600, avgCost: 35.00, price: 32.84, currency: 'HKD', year_change: -5.8 },
+            { symbol: '01133.HK', name: '哈尔滨电气', market: '港股', shares: 1000, avgCost: 20.00, price: 22.90, currency: 'HKD', year_change: 8.9 },
+            { symbol: '00179.HK', name: '德昌电机控股', market: '港股', shares: 500, avgCost: 28.00, price: 27.30, currency: 'HKD', year_change: -2.1 },
+            { symbol: '02600.HK', name: '中国铝业', market: '港股', shares: 2000, avgCost: 11.00, price: 13.17, currency: 'HKD', year_change: 18.5 },
+            { symbol: '00400.HK', name: '硬蛋创新', market: '港股', shares: 5000, avgCost: 3.50, price: 4.09, currency: 'HKD', year_change: 25.3 }
         ];
     }
 
