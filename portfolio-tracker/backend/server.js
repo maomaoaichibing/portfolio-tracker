@@ -438,10 +438,13 @@ function generateMonitoringMetrics(stockAnalyses) {
     return metrics;
 }
 
-// 启动服务器
-app.listen(PORT, () => {
-    console.log(`持仓智投服务已启动: http://localhost:${PORT}`);
-    console.log(`API Key 状态: ${process.env.KIMI_API_KEY ? '已配置' : '未配置'}`);
-});
+// 启动服务器（本地开发时）
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`持仓智投服务已启动: http://localhost:${PORT}`);
+        console.log(`API Key 状态: ${process.env.KIMI_API_KEY ? '已配置' : '未配置'}`);
+    });
+}
 
+// 导出给 Vercel 使用
 module.exports = app;
