@@ -1,0 +1,6 @@
+
+> portfolio-tracker@1.0.0 start
+> node index.js
+
+持仓智投服务已启动: http://localhost:3000
+API Key 状态: 已配置

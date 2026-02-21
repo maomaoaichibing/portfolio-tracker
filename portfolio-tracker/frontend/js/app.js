@@ -627,6 +627,159 @@ async function sendDailyReport() {
     }
 }
 
+// ============ 价格预警功能 ============
+
+// 显示价格预警模态框
+function showPriceAlertModal() {
+    document.getElementById('priceAlertModal').classList.remove('hidden');
+    document.getElementById('priceAlertModal').classList.add('flex');
+    
+    // 填充股票选择下拉框
+    const select = document.getElementById('alertSymbol');
+    select.innerHTML = '<option value="">选择股票</option>';
+    
+    portfolioData.forEach(stock => {
+        const option = document.createElement('option');
+        option.value = stock.code;
+        option.textContent = `${stock.name} (${stock.code})`;
+        select.appendChild(option);
+    });
+    
+    // 监听选择变化，显示当前价格
+    select.addEventListener('change', async (e) => {
+        const symbol = e.target.value;
+        if (symbol) {
+            const stock = portfolioData.find(s => s.code === symbol);
+            if (stock) {
+                document.getElementById('currentPriceDisplay').classList.remove('hidden');
+                document.getElementById('currentPriceValue').textContent = formatCurrency(stock.price);
+            }
+        } else {
+            document.getElementById('currentPriceDisplay').classList.add('hidden');
+        }
+    });
+}
+
+// 隐藏价格预警模态框
+function hidePriceAlertModal() {
+    document.getElementById('priceAlertModal').classList.add('hidden');
+    document.getElementById('priceAlertModal').classList.remove('flex');
+    // 重置表单
+    document.getElementById('alertSymbol').value = '';
+    document.getElementById('alertTargetPrice').value = '';
+    document.getElementById('currentPriceDisplay').classList.add('hidden');
+}
+
+// 创建价格预警
+async function createPriceAlert() {
+    const symbol = document.getElementById('alertSymbol').value;
+    const alertType = document.getElementById('alertType').value;
+    const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
+    
+    if (!symbol || !targetPrice || targetPrice <= 0) {
+        showToast('请填写完整信息', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/price-alerts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol, alertType, targetPrice })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message);
+            hidePriceAlertModal();
+            loadPriceAlerts();
+        } else {
+            showToast('创建失败: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('创建预警失败:', error);
+        showToast('创建失败，请检查服务是否启动', 'error');
+    }
+}
+
+// 加载价格预警列表
+async function loadPriceAlerts() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/price-alerts`);
+        const data = await response.json();
+        
+        // 更新提醒面板显示价格预警
+        const container = document.getElementById('alertsContainer');
+        if (!container) return;
+        
+        if (data.alerts && data.alerts.length > 0) {
+            const alertHtml = data.alerts.map(alert => `
+                <div class="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg mb-2">
+                    <div class="flex-shrink-0">
+                        ${alert.alert_type === 'above' ? '🚀' : '⚠️'}
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">
+                            ${alert.symbol} ${alert.alert_type === 'above' ? '突破' : '跌破'} ¥${alert.target_price}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            当前: ¥${alert.current_price || '--'} | 目标: ¥${alert.target_price}
+                        </p>
+                    </div>
+                    <button onclick="deletePriceAlert(${alert.id})" class="text-gray-400 hover:text-red-600">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+            
+            // 如果已有内容，追加到前面
+            const existing = container.innerHTML;
+            if (existing.includes('暂无未读提醒')) {
+                container.innerHTML = alertHtml;
+            } else if (!existing.includes('价格预警')) {
+                container.innerHTML = alertHtml + existing;
+            }
+        }
+    } catch (error) {
+        console.error('加载价格预警失败:', error);
+    }
+}
+
+// 删除价格预警
+async function deletePriceAlert(id) {
+    if (!confirm('确定要删除这个预警吗？')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/price-alerts/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('预警已删除');
+            loadPriceAlerts();
+        } else {
+            showToast('删除失败', 'error');
+        }
+    } catch (error) {
+        console.error('删除预警失败:', error);
+        showToast('删除失败', 'error');
+    }
+}
+
+// 在初始化时加载价格预警
+const originalLoadPortfolio2 = window.loadPortfolio;
+if (originalLoadPortfolio2) {
+    window.loadPortfolio = async function() {
+        await originalLoadPortfolio2.apply(this, arguments);
+        loadPriceAlerts();
+    };
+}
+
 // 显示 Toast 通知
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -665,3 +818,7 @@ window.loadAlerts = loadAlerts;
 window.markAlertRead = markAlertRead;
 window.checkMonitoring = checkMonitoring;
 window.sendDailyReport = sendDailyReport;
+window.showPriceAlertModal = showPriceAlertModal;
+window.hidePriceAlertModal = hidePriceAlertModal;
+window.createPriceAlert = createPriceAlert;
+window.deletePriceAlert = deletePriceAlert;

@@ -62,11 +62,17 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS alerts (
+    db.run(`CREATE TABLE IF NOT EXISTS price_alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT NOT NULL,
         alert_type TEXT NOT NULL,
-        priority TEXT DEFAULT 'medium',
+        target_price REAL NOT NULL,
+        current_price REAL,
+        is_triggered INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        triggered_at DATETIME
+    )`);
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         is_read INTEGER DEFAULT 0,
@@ -480,6 +486,157 @@ app.post('/api/feishu/daily-report', async (req, res) => {
         res.status(500).json({ error: '发送失败: ' + error.message });
     }
 });
+
+// ============ 价格预警 API ============
+
+// 获取价格预警列表
+app.get('/api/price-alerts', (req, res) => {
+    const { symbol } = req.query;
+    let sql = 'SELECT * FROM price_alerts WHERE is_active = 1';
+    const params = [];
+    
+    if (symbol) {
+        sql += ' AND symbol = ?';
+        params.push(symbol);
+    }
+    sql += ' ORDER BY created_at DESC';
+
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ alerts: rows });
+    });
+});
+
+// 创建价格预警
+app.post('/api/price-alerts', async (req, res) => {
+    try {
+        const { symbol, alertType, targetPrice } = req.body;
+        
+        if (!symbol || !alertType || !targetPrice) {
+            return res.status(400).json({ error: '缺少必要参数' });
+        }
+
+        // 获取当前价格
+        const stockData = await stockService.getStockPrice(symbol);
+        const currentPrice = stockData ? parseFloat(stockData.price) : null;
+
+        db.run(
+            'INSERT INTO price_alerts (symbol, alert_type, target_price, current_price) VALUES (?, ?, ?, ?)',
+            [symbol, alertType, targetPrice, currentPrice],
+            function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                res.json({
+                    success: true,
+                    alertId: this.lastID,
+                    message: `已创建${alertType === 'above' ? '突破' : '跌破'}预警：${symbol} 目标价 ${targetPrice}`
+                });
+            }
+        );
+    } catch (error) {
+        console.error('创建价格预警失败:', error);
+        res.status(500).json({ error: '创建失败: ' + error.message });
+    }
+});
+
+// 删除价格预警
+app.delete('/api/price-alerts/:id', (req, res) => {
+    const { id } = req.params;
+    db.run('UPDATE price_alerts SET is_active = 0 WHERE id = ?', [id], (err) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ success: true, message: '预警已删除' });
+    });
+});
+
+// 检查价格预警
+app.post('/api/price-alerts/check', async (req, res) => {
+    try {
+        const triggeredAlerts = await checkPriceAlerts();
+        res.json({
+            success: true,
+            triggered: triggeredAlerts.length,
+            alerts: triggeredAlerts
+        });
+    } catch (error) {
+        console.error('检查价格预警失败:', error);
+        res.status(500).json({ error: '检查失败: ' + error.message });
+    }
+});
+
+// 检查价格预警实现
+async function checkPriceAlerts() {
+    return new Promise((resolve, reject) => {
+        db.all(
+            'SELECT * FROM price_alerts WHERE is_active = 1 AND is_triggered = 0',
+            [],
+            async (err, alerts) => {
+                if (err) return reject(err);
+                
+                const triggered = [];
+                
+                for (const alert of alerts) {
+                    try {
+                        const stockData = await stockService.getStockPrice(alert.symbol);
+                        if (!stockData) continue;
+                        
+                        const currentPrice = parseFloat(stockData.price);
+                        const targetPrice = parseFloat(alert.target_price);
+                        
+                        let isTriggered = false;
+                        
+                        if (alert.alert_type === 'above' && currentPrice >= targetPrice) {
+                            isTriggered = true;
+                        } else if (alert.alert_type === 'below' && currentPrice <= targetPrice) {
+                            isTriggered = true;
+                        }
+                        
+                        if (isTriggered) {
+                            // 更新预警状态
+                            db.run(
+                                'UPDATE price_alerts SET is_triggered = 1, triggered_at = CURRENT_TIMESTAMP, current_price = ? WHERE id = ?',
+                                [currentPrice, alert.id]
+                            );
+                            
+                            // 保存提醒
+                            const alertRecord = {
+                                symbol: alert.symbol,
+                                alert_type: 'price_alert',
+                                priority: 'high',
+                                title: `价格预警触发：${alert.symbol}`,
+                                content: `${alert.alert_type === 'above' ? '突破' : '跌破'}目标价 ${targetPrice}，当前价格 ${currentPrice}`
+                            };
+                            saveAlert(alertRecord);
+                            
+                            // 发送飞书通知
+                            await feishuService.sendPriceAlert(
+                                alert.symbol,
+                                alert.symbol,
+                                currentPrice,
+                                targetPrice,
+                                alert.alert_type
+                            );
+                            
+                            triggered.push({
+                                ...alert,
+                                currentPrice,
+                                triggeredAt: new Date().toISOString()
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`检查预警 ${alert.symbol} 失败:`, err.message);
+                    }
+                }
+                
+                resolve(triggered);
+            }
+        );
+    });
+}
 
 // 生成监控指标
 function generateMonitoringMetrics(stockAnalyses) {
