@@ -6,6 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 const aiService = require('./ai-service');
 const stockService = require('./stock-service');
 const monitoringService = require('./monitoring-service');
+const feishuService = require('./feishu-service');
 require('dotenv').config();
 
 const app = express();
@@ -414,6 +415,69 @@ app.post('/api/alerts/:id/read', async (req, res) => {
     } catch (error) {
         console.error('标记已读失败:', error);
         res.status(500).json({ error: '操作失败: ' + error.message });
+    }
+});
+
+// ============ 飞书推送 API ============
+
+// 发送测试消息到飞书
+app.post('/api/feishu/test', async (req, res) => {
+    try {
+        const result = await feishuService.sendTextMessage('🎉 测试消息：持仓智投飞书推送功能已配置！');
+        res.json(result);
+    } catch (error) {
+        console.error('飞书测试失败:', error);
+        res.status(500).json({ error: '发送失败: ' + error.message });
+    }
+});
+
+// 发送持仓提醒到飞书
+app.post('/api/feishu/alerts', async (req, res) => {
+    try {
+        const { alerts } = req.body;
+        const result = await feishuService.sendPortfolioAlerts(alerts);
+        res.json(result);
+    } catch (error) {
+        console.error('飞书提醒发送失败:', error);
+        res.status(500).json({ error: '发送失败: ' + error.message });
+    }
+});
+
+// 发送每日报告到飞书
+app.post('/api/feishu/daily-report', async (req, res) => {
+    try {
+        const report = await monitoringService.generateMonitoringReport(db);
+        
+        // 获取持仓数据
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio', [], (err, rows) => {
+                if (err) return reject(err);
+                resolve(rows);
+            });
+        });
+        
+        const totalValue = portfolio.reduce((sum, item) => sum + (item.price * item.shares), 0);
+        const todayPnL = portfolio.reduce((sum, item) => {
+            const pnl = item.price && item.avg_cost ? (item.price - item.avg_cost) * item.shares : 0;
+            return sum + pnl;
+        }, 0);
+        
+        const result = await feishuService.sendDailyReport({
+            portfolio: portfolio.map(p => ({
+                symbol: p.symbol,
+                name: p.name,
+                price: p.price || 0,
+                changePercent: p.year_change || 0
+            })),
+            totalValue,
+            todayPnL,
+            alerts: report.latestAlerts
+        });
+        
+        res.json(result);
+    } catch (error) {
+        console.error('飞书日报发送失败:', error);
+        res.status(500).json({ error: '发送失败: ' + error.message });
     }
 });
 
