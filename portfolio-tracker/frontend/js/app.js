@@ -771,6 +771,198 @@ async function deletePriceAlert(id) {
     }
 }
 
+// ============ 新闻监控功能 ============
+
+// 显示新闻模态框
+function showNewsModal() {
+    document.getElementById('newsModal').classList.remove('hidden');
+    document.getElementById('newsModal').classList.add('flex');
+    loadAllNews();
+}
+
+// 隐藏新闻模态框
+function hideNewsModal() {
+    document.getElementById('newsModal').classList.add('hidden');
+    document.getElementById('newsModal').classList.remove('flex');
+}
+
+// 加载所有新闻
+async function loadAllNews() {
+    const container = document.getElementById('newsContent');
+    container.innerHTML = `
+        <div class="flex items-center justify-center py-12">
+            <div class="loading-spinner mr-3"></div>
+            <span class="text-gray-600">加载新闻...</span>
+        </div>
+    `;
+    
+    try {
+        // 获取重要新闻
+        const response = await fetch(`${API_BASE_URL}/news?importantOnly=true&limit=50`);
+        const data = await response.json();
+        
+        if (data.news && data.news.length > 0) {
+            renderNewsList(data.news);
+        } else {
+            // 如果没有重要新闻，获取所有新闻
+            const allResponse = await fetch(`${API_BASE_URL}/news?limit=30`);
+            const allData = await allResponse.json();
+            
+            if (allData.news && allData.news.length > 0) {
+                renderNewsList(allData.news);
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                        </svg>
+                        <p>暂无新闻数据</p>
+                        <button onclick="refreshNews()" class="mt-4 text-blue-600 hover:text-blue-800">点击刷新</button>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('加载新闻失败:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 text-gray-500">
+                <p>加载新闻失败</p>
+                <button onclick="refreshNews()" class="mt-4 text-blue-600 hover:text-blue-800">重试</button>
+            </div>
+        `;
+    }
+}
+
+// 渲染新闻列表
+function renderNewsList(news) {
+    const container = document.getElementById('newsContent');
+    
+    // 按股票分组
+    const groupedNews = {};
+    news.forEach(item => {
+        if (!groupedNews[item.symbol]) {
+            groupedNews[item.symbol] = [];
+        }
+        groupedNews[item.symbol].push(item);
+    });
+    
+    let html = '';
+    
+    // 重要新闻标题
+    const importantCount = news.filter(n => n.is_important).length;
+    html += `
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-lg font-semibold text-gray-900">最新动态</h4>
+                <span class="text-sm text-gray-500">共 ${news.length} 条</span>
+            </div>
+            ${importantCount > 0 ? `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div class="flex items-center">
+                        <span class="text-red-600 mr-2">🔴</span>
+                        <span class="text-sm text-red-800">有 ${importantCount} 条重要新闻需要关注</span>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    // 渲染每个股票的新闻
+    for (const [symbol, items] of Object.entries(groupedNews)) {
+        const stock = portfolioData.find(p => p.code === symbol);
+        const stockName = stock ? stock.name : symbol;
+        
+        html += `
+            <div class="mb-6 border-b border-gray-200 pb-6 last:border-0">
+                <div class="flex items-center mb-3">
+                    <h5 class="font-semibold text-gray-900">${stockName}</h5>
+                    <span class="ml-2 text-sm text-gray-500">(${symbol})</span>
+                    <span class="ml-auto text-sm text-gray-400">${items.length} 条</span>
+                </div>
+                <div class="space-y-3">
+        `;
+        
+        items.slice(0, 5).forEach(item => {
+            const sentimentColor = item.sentiment === 'positive' ? 'text-green-600' : 
+                                  item.sentiment === 'negative' ? 'text-red-600' : 'text-gray-600';
+            const sentimentIcon = item.sentiment === 'positive' ? '📈' : 
+                                 item.sentiment === 'negative' ? '📉' : '➖';
+            const importanceBadge = item.is_important ? 
+                '<span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">重要</span>' : '';
+            
+            html += `
+                <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <a href="${item.url || '#'" target="_blank" class="font-medium text-gray-900 hover:text-blue-600">
+                                ${item.title}
+                            </a>
+                            ${importanceBadge}
+                            <p class="text-sm text-gray-600 mt-1">${item.summary || ''}</p>
+                            <div class="flex items-center mt-2 text-xs text-gray-400">
+                                <span>${item.source || '未知来源'}</span>
+                                <span class="mx-2">•</span>
+                                <span>${new Date(item.published_at).toLocaleString('zh-CN')}</span>
+                                <span class="mx-2">•</span>
+                                <span class="${sentimentColor}">${sentimentIcon} ${item.sentiment === 'positive' ? '正面' : item.sentiment === 'negative' ? '负面' : '中性'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// 刷新新闻
+async function refreshNews() {
+    const container = document.getElementById('newsContent');
+    container.innerHTML = `
+        <div class="flex items-center justify-center py-12">
+            <div class="loading-spinner mr-3"></div>
+            <span class="text-gray-600">正在刷新新闻...</span>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/news/refresh`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`新闻刷新完成，共更新 ${result.results.reduce((sum, r) => sum + r.newNews, 0)} 条`);
+            loadAllNews();
+        } else {
+            showToast('刷新失败', 'error');
+        }
+    } catch (error) {
+        console.error('刷新新闻失败:', error);
+        showToast('刷新失败，请检查服务是否启动', 'error');
+    }
+}
+
+// 加载单只股票的新闻
+async function loadStockNews(symbol) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/news/${symbol}?limit=10`);
+        const data = await response.json();
+        
+        return data.news || [];
+    } catch (error) {
+        console.error(`加载 ${symbol} 新闻失败:`, error);
+        return [];
+    }
+}
+
 // 在初始化时加载价格预警
 const originalLoadPortfolio2 = window.loadPortfolio;
 if (originalLoadPortfolio2) {
@@ -822,3 +1014,7 @@ window.showPriceAlertModal = showPriceAlertModal;
 window.hidePriceAlertModal = hidePriceAlertModal;
 window.createPriceAlert = createPriceAlert;
 window.deletePriceAlert = deletePriceAlert;
+window.showNewsModal = showNewsModal;
+window.hideNewsModal = hideNewsModal;
+window.refreshNews = refreshNews;
+window.loadStockNews = loadStockNews;
