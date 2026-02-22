@@ -18,9 +18,10 @@
             <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
                 <h3 class="text-lg font-semibold mb-4">测试上传</h3>
                 
-                <div id="testDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
-                    <input type="file" id="testFileInput" class="hidden" accept="image/*">
+                <div id="testDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer" onclick="document.getElementById('testFileInput').click()">
+                    <input type="file" id="testFileInput" class="hidden" accept="image/*" capture="environment">
                     <p class="text-gray-600">点击选择文件</p>
+                    <p class="text-xs text-gray-400 mt-1">支持拍照或从相册选择</p>
                 </div>
                 
                 <div id="testPreview" class="hidden mt-4 p-4 bg-gray-50 rounded">
@@ -80,21 +81,20 @@
             const dz = document.getElementById('testDropZone');
             const fi = document.getElementById('testFileInput');
             
-            dz.addEventListener('click', (e) => {
-                log('dropZone clicked');
-                e.preventDefault();
-                e.stopPropagation();
+            // iOS Safari 需要直接使用 onclick 属性，而不是 addEventListener
+            dz.onclick = function(e) {
+                log('dropZone clicked (onclick)');
                 fi.click();
-            });
+            };
             
-            fi.addEventListener('change', (e) => {
+            fi.onchange = function(e) {
                 log('file selected: ' + (e.target.files[0]?.name || 'none'));
                 if (e.target.files.length > 0) {
                     document.getElementById('testFileName').textContent = e.target.files[0].name;
                     document.getElementById('testPreview').classList.remove('hidden');
                     document.getElementById('testUploadBtn').disabled = false;
                 }
-            });
+            };
             
             log('Events bound successfully');
         }
