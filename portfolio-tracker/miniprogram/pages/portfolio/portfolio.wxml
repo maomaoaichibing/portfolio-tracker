@@ -1,0 +1,128 @@
+/**portfolio.wxml**/
+<view class="page-container">
+  <!-- 顶部统计 -->
+  <view class="header-stats">
+    <view class="stat-item">
+      <text class="stat-value">{{totalMarketValue}}</text>
+      <text class="stat-label">总市值</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value {{totalPnL >= 0 ? 'text-success' : 'text-danger'}}">
+        {{totalPnL >= 0 ? '+' : ''}}{{totalPnL}}%
+      </text>
+      <text class="stat-label">总盈亏</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value">{{portfolio.length}}</text>
+      <text class="stat-label">持仓数</text>
+    </view>
+  </view>
+
+  <!-- 持仓列表 -->
+  <view class="portfolio-list" wx:if="{{portfolio.length > 0}}">
+    <view wx:for="{{portfolio}}" wx:key="id" class="stock-card" bindtap="viewStockDetail" data-stock="{{item}}">
+      <view class="stock-header">
+        <view class="stock-info">
+          <text class="stock-name">{{item.name}}</text>
+          <text class="stock-symbol">{{item.symbol}}</text>
+        </view>
+        <view class="stock-price">
+          <text class="current-price">¥{{item.price}}</text>
+          <text class="price-change {{item.change >= 0 ? 'text-success' : 'text-danger'}}">
+            {{item.change >= 0 ? '+' : ''}}{{item.change}} ({{item.changePercent}}%)
+          </text>
+        </view>
+      </view>
+      
+      <view class="stock-details">
+        <view class="detail-item">
+          <text class="detail-label">持仓数量</text>
+          <text class="detail-value">{{item.shares}}</text>
+        </view>
+        
+        <view class="detail-item">
+          <text class="detail-label">成本价</text>
+          <text class="detail-value">¥{{item.avgCost || '-'}}</text>
+        </view>
+        
+        <view class="detail-item">
+          <text class="detail-label">市值</text>
+          <text class="detail-value">¥{{item.marketValue}}</text>
+        </view>
+        
+        <view class="detail-item">
+          <text class="detail-label">盈亏</text>
+          <text class="detail-value {{item.pnl >= 0 ? 'text-success' : 'text-danger'}}">
+            {{item.pnl >= 0 ? '+' : ''}}{{item.pnl}}%
+          </text>
+        </view>
+      </view>
+      
+      <!-- 快捷操作 -->
+      <view class="stock-actions">
+        <button class="action-btn" size="mini" bindtap="viewAnalysis" data-symbol="{{item.symbol}}">
+          分析
+        </button>
+        <button class="action-btn" size="mini" type="primary" bindtap="setAlert" data-symbol="{{item.symbol}}">
+          预警
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{portfolio.length === 0 && !loading}}">
+    <image class="empty-icon" src="/images/empty-portfolio.png" mode="aspectFit"></image>
+    <text class="empty-text">暂无持仓</text>
+    <text class="empty-subtext">点击下方按钮上传持仓截图</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text>加载中...</text>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <button class="btn-primary upload-btn" bindtap="uploadPortfolio">
+      <text class="btn-icon">📸</text>
+      <text>上传持仓</text>
+    </button>
+  </view>
+
+  <!-- 设置预警弹窗 -->
+  <view class="modal" wx:if="{{showAlertModal}}">
+    <view class="modal-mask" bindtap="closeAlertModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">设置价格预警</text>
+        <text class="modal-close" bindtap="closeAlertModal">×</text>
+      </view>
+      
+      <view class="modal-body">
+        <text class="alert-stock">{{selectedStock.name}} ({{selectedStock.symbol}})</text>
+        <text class="alert-current">当前价格: ¥{{selectedStock.price}}</text>
+        
+        <view class="form-item">
+          <text class="form-label">预警类型</text>
+          <picker bindchange="onAlertTypeChange" value="{{alertTypeIndex}}" range="{{alertTypes}}">
+            <view class="picker">
+              {{alertTypes[alertTypeIndex]}}
+            </view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">目标价格</text>
+          <input type="digit" placeholder="请输入目标价格" value="{{targetPrice}}" bindinput="onPriceInput" />
+        </view>
+      </view>
+      
+      <view class="modal-footer">
+        <button class="btn-secondary" bindtap="closeAlertModal">取消</button>
+        <button class="btn-primary" bindtap="saveAlert">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

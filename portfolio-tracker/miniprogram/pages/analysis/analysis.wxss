@@ -1,0 +1,355 @@
+/**analysis.wxss**/
+.page-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* 标签栏 */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 30rpx 0;
+  font-size: 28rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab-item.active {
+  color: #3B82F6;
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #3B82F6;
+  border-radius: 2rpx;
+}
+
+/* 标签内容 */
+.tab-content {
+  padding: 20rpx;
+}
+
+/* 概览网格 */
+.overview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.overview-item {
+  width: calc(50% - 10rpx);
+  text-align: center;
+  padding: 30rpx 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+}
+
+.overview-value {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.overview-label {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 行业分布 */
+.sector-list {
+  margin-top: 20rpx;
+}
+
+.sector-item {
+  margin-bottom: 20rpx;
+}
+
+.sector-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.sector-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.sector-percent {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #3B82F6;
+}
+
+.progress-bar {
+  height: 12rpx;
+  background: #f0f0f0;
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+/* 风险评估 */
+.risk-list {
+  margin-top: 20rpx;
+}
+
+.risk-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.risk-item:last-child {
+  border-bottom: none;
+}
+
+.risk-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.risk-badge {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.risk-badge.high {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.risk-badge.medium {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.risk-badge.low {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+/* 股票选择器 */
+.stock-selector {
+  margin-bottom: 20rpx;
+}
+
+.stock-tabs {
+  white-space: nowrap;
+  background: #fff;
+  padding: 20rpx;
+  border-radius: 12rpx;
+}
+
+.stock-tab {
+  display: inline-block;
+  padding: 16rpx 30rpx;
+  margin-right: 16rpx;
+  background: #f5f5f5;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #666;
+}
+
+.stock-tab.active {
+  background: #3B82F6;
+  color: #fff;
+}
+
+/* AI 分析 */
+.analysis-summary {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin: 20rpx 0;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+}
+
+.analysis-section {
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.section-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.driver-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+}
+
+.driver-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.driver-impact {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.driver-impact.positive {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.driver-impact.negative {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.driver-impact.neutral {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.risk-text {
+  font-size: 28rpx;
+  color: #666;
+  padding: 12rpx 0;
+}
+
+/* 监控指标 */
+.metric-list {
+  margin-top: 20rpx;
+}
+
+.metric-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.metric-item:last-child {
+  border-bottom: none;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.metric-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.metric-value {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.metric-value.normal {
+  color: #10B981;
+}
+
+.metric-value.warning {
+  color: #F59E0B;
+}
+
+.metric-value.danger {
+  color: #EF4444;
+}
+
+.metric-threshold {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 提醒卡片 */
+.alert-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  border-left: 8rpx solid #ccc;
+}
+
+.alert-card.high {
+  border-left-color: #EF4444;
+}
+
+.alert-card.medium {
+  border-left-color: #F59E0B;
+}
+
+.alert-card.low {
+  border-left-color: #3B82F6;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16rpx;
+}
+
+.alert-title {
+  flex: 1;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-right: 20rpx;
+}
+
+.alert-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.alert-content {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 20rpx;
+}
+
+.alert-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-stock {
+  font-size: 26rpx;
+  color: #3B82F6;
+}
+
+.read-badge {
+  font-size: 24rpx;
+  color: #999;
+}

@@ -1,0 +1,175 @@
+/**analysis.wxml**/
+<view class="page-container">
+  <!-- 分析类型切换 -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 'portfolio' ? 'active' : ''}}" bindtap="switchTab" data-tab="portfolio">
+      组合分析
+    </view>
+    <view class="tab-item {{activeTab === 'stocks' ? 'active' : ''}}" bindtap="switchTab" data-tab="stocks">
+      个股分析
+    </view>
+    <view class="tab-item {{activeTab === 'alerts' ? 'active' : ''}}" bindtap="switchTab" data-tab="alerts">
+      监控提醒
+    </view>
+  </view>
+
+  <!-- 组合分析 -->
+  <view wx:if="{{activeTab === 'portfolio'}}" class="tab-content">
+    <!-- 组合概览 -->
+    <view class="card">
+      <text class="card-title">组合概览</text>
+      
+      <view class="overview-grid">
+        <view class="overview-item">
+          <text class="overview-value {{portfolioStats.totalReturn >= 0 ? 'text-success' : 'text-danger'}}">
+            {{portfolioStats.totalReturn >= 0 ? '+' : ''}}{{portfolioStats.totalReturn}}%
+          </text>
+          <text class="overview-label">总收益率</text>
+        </view>
+        
+        <view class="overview-item">
+          <text class="overview-value">{{portfolioStats.volatility}}%</text>
+          <text class="overview-label">波动率</text>
+        </view>
+        
+        <view class="overview-item">
+          <text class="overview-value">{{portfolioStats.sharpeRatio}}</text>
+          <text class="overview-label">夏普比率</text>
+        </view>
+        
+        <view class="overview-item">
+          <text class="overview-value">{{portfolioStats.maxDrawdown}}%</text>
+          <text class="overview-label">最大回撤</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 行业分布 -->
+    <view class="card">
+      <text class="card-title">行业分布</text>
+      
+      <view class="sector-list">
+        <view wx:for="{{sectorDistribution}}" wx:key="name" class="sector-item">
+          <view class="sector-info">
+            <text class="sector-name">{{item.name}}</text>
+            <text class="sector-percent">{{item.percent}}%</text>
+          </view>
+          
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{item.percent}}%; background: {{item.color}}"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 风险评估 -->
+    <view class="card">
+      <text class="card-title">风险评估</text>
+      
+      <view class="risk-list">
+        <view wx:for="{{riskFactors}}" wx:key="index" class="risk-item">
+          <text class="risk-name">{{item.name}}</text>
+          
+          <view class="risk-level">
+            <text class="risk-badge {{item.level}}">{{item.levelText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 个股分析 -->
+  <view wx:if="{{activeTab === 'stocks'}}" class="tab-content">
+    <view class="stock-selector">
+      <scroll-view scroll-x class="stock-tabs">
+        <view wx:for="{{portfolio}}" wx:key="id" 
+              class="stock-tab {{selectedStock.symbol === item.symbol ? 'active' : ''}}"
+              bindtap="selectStock"
+              data-stock="{{item}}">
+          {{item.name}}
+        </view>
+      </scroll-view>
+    </view>
+
+    <view wx:if="{{selectedStock.symbol}}">
+      <!-- AI 分析 -->
+      <view class="card">
+        <view class="flex-between">
+          <text class="card-title">AI 投资分析</text>
+          <text class="analysis-date">{{stockAnalysis.date}}</text>
+        </view>
+        
+        <text class="analysis-summary">{{stockAnalysis.summary}}</text>
+        
+        <view class="analysis-section">
+          <text class="section-title">📈 核心驱动因素</text>
+          
+          <view wx:for="{{stockAnalysis.drivers}}" wx:key="index" class="driver-item">
+            <text class="driver-name">{{item.factor}}</text>
+            <text class="driver-impact {{item.impact}}">{{item.impactText}}</text>
+          </view>
+        </view>
+        
+        <view class="analysis-section">
+          <text class="section-title">⚠️ 风险因素</text>
+          
+          <view wx:for="{{stockAnalysis.risks}}" wx:key="index" class="risk-text">
+            • {{item}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 监控指标 -->
+      <view class="card">
+        <text class="card-title">监控指标</text>
+        
+        <view class="metric-list">
+          <view wx:for="{{stockAnalysis.metrics}}" wx:key="name" class="metric-item">
+            <view class="metric-header">
+              <text class="metric-name">{{item.name}}</text>
+              
+              <text class="metric-value {{item.status}}">{{item.currentValue}}</text>
+            </view>
+            
+            <text class="metric-threshold">阈值: {{item.threshold}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-state">
+      <text class="empty-text">请选择股票查看分析</text>
+    </view>
+  </view>
+
+  <!-- 监控提醒 -->
+  <view wx:if="{{activeTab === 'alerts'}}" class="tab-content">
+    <view wx:if="{{alerts.length > 0}}">
+      <view wx:for="{{alerts}}" wx:key="id" class="alert-card {{item.priority}}">
+        <view class="alert-header">
+          <text class="alert-title">{{item.title}}</text>
+          
+          <text class="alert-time">{{item.time}}</text>
+        </view>
+        
+        <text class="alert-content">{{item.content}}</text>
+        
+        <view class="alert-footer">
+          <text class="alert-stock">{{item.stockName}} ({{item.symbol}})</text>
+          
+          <button wx:if="{{!item.isRead}}" size="mini" type="primary" bindtap="markAsRead" data-id="{{item.id}}">
+            标记已读
+          </button>
+          
+          <text wx:else class="read-badge">已读</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-state">
+      <image class="empty-icon" src="/images/empty-alerts.png" mode="aspectFit"></image>
+      <text class="empty-text">暂无提醒</text>
+      <text class="empty-subtext">当监控指标触发时，会在这里显示</text>
+    </view>
+  </view>
+</view>
