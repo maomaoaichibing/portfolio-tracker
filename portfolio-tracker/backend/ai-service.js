@@ -3,12 +3,28 @@
  */
 
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
-const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
+// 直接读取 .env 文件获取 API key（避免被系统环境变量覆盖）
+function loadApiKey() {
+    try {
+        const envPath = path.join(__dirname, '..', '.env');
+        const content = fs.readFileSync(envPath, 'utf8');
+        const match = content.match(/KIMI_API_KEY=(.+)/);
+        return match ? match[1].trim() : '';
+    } catch (e) {
+        return process.env.KIMI_API_KEY || '';
+    }
+}
+
+const KIMI_API_KEY = loadApiKey();
 const KIMI_API_URL = 'https://api.moonshot.cn/v1/chat/completions';
 
 // 模拟模式：没有 API key 时返回模拟数据
-const MOCK_MODE = true; // 临时启用模拟模式用于演示
+const MOCK_MODE = !KIMI_API_KEY || KIMI_API_KEY === 'your_kimi_api_key_here' || KIMI_API_KEY.length < 10;
+
+console.log('[AI Service] MOCK_MODE:', MOCK_MODE, 'Key available:', !!KIMI_API_KEY);
 
 /**
  * 识别持仓截图
