@@ -8,6 +8,8 @@ const stockService = require('./stock-service');
 const monitoringService = require('./monitoring-service');
 const feishuService = require('./feishu-service');
 const newsService = require('./news-service');
+const { authenticateToken, optionalAuth } = require('./auth');
+const dataService = require('./data-service');
 require('dotenv').config();
 
 const app = express();
@@ -224,20 +226,28 @@ app.post('/api/portfolio/analyze', async (req, res) => {
     }
 });
 
-// 获取持仓列表
-app.get('/api/portfolio', (req, res) => {
-    db.all('SELECT * FROM portfolio ORDER BY updated_at DESC', [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
+// 获取持仓列表（支持多用户）
+app.get('/api/portfolio', authenticateToken, (req, res) => {
+    const userId = req.userId;
+    
+    db.all(
+        'SELECT * FROM portfolio WHERE user_id = ? ORDER BY updated_at DESC',
+        [userId],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ portfolio: rows });
         }
-        res.json({ portfolio: rows });
-    });
+    );
 });
 
-// 刷新持仓价格
-app.post('/api/portfolio/refresh-prices', async (req, res) => {
+// 刷新持仓价格（支持多用户）
+app.post('/api/portfolio/refresh-prices', authenticateToken, async (req, res) => {
     try {
-        const result = await stockService.updatePortfolioPrices(db);
+        const userId = req.userId;
+        const result = await dataService.updatePortfolioPrices(db, userId);
+        
         res.json({
             success: true,
             message: `已更新 ${result.updated}/${result.total} 只股票价格`,
@@ -272,20 +282,8 @@ app.get('/api/stock/history/:symbol', async (req, res) => {
         const { symbol } = req.params;
         const days = parseInt(req.query.days) || 30;
         
-        // 首先尝试从数据库获取
-        let history = await getPriceHistoryFromDB(symbol, days);
-        
-        // 如果数据库中没有足够的数据，从 API 获取并保存
-        if (history.length < days * 0.8) {
-            console.log(`[历史价格] 数据库中 ${symbol} 数据不足，从 API 获取...`);
-            const apiHistory = await stockService.getStockHistory(symbol, days);
-            
-            if (apiHistory && apiHistory.length > 0) {
-                // 保存到数据库
-                savePriceHistory(symbol, apiHistory);
-                history = apiHistory;
-            }
-        }
+        // 使用统一数据服务获取历史数据
+        const history = await dataService.getStockHistory(symbol, days);
         
         res.json({
             success: true,
@@ -297,6 +295,68 @@ app.get('/api/stock/history/:symbol', async (req, res) => {
         console.error('获取历史价格失败:', error);
         res.status(500).json({ error: '获取历史价格失败: ' + error.message });
     }
+});
+
+// 投资组合对比分析
+app.get('/api/portfolio/comparison', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { benchmark = '000001.SH' } = req.query; // 默认对比上证指数
+        
+        // 获取用户持仓
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all(
+                'SELECT * FROM portfolio WHERE user_id = ?',
+                [userId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                }
+            );
+        });
+        
+        if (portfolio.length === 0) {
+            return res.json({
+                success: true,
+                message: '没有持仓数据',
+                comparison: null
+            });
+        }
+        
+        // 获取持仓和基准指数的历史数据
+        const days = 90;
+        const portfolioHistory = await calculatePortfolioHistory(portfolio, days);
+        const benchmarkHistory = await dataService.getStockHistory(benchmark, days);
+        
+        // 计算对比指标
+        const comparison = {
+            portfolio: {
+                totalReturn: calculateTotalReturn(portfolioHistory),
+                volatility: calculateVolatility(portfolioHistory),
+                maxDrawdown: calculateMaxDrawdown(portfolioHistory),
+                sharpeRatio: calculateSharpeRatio(portfolioHistory)
+            },
+            benchmark: {
+                symbol: benchmark,
+                name: getBenchmarkName(benchmark),
+                totalReturn: calculateTotalReturn(benchmarkHistory),
+                volatility: calculateVolatility(benchmarkHistory),
+                maxDrawdown: calculateMaxDrawdown(benchmarkHistory),
+                sharpeRatio: calculateSharpeRatio(benchmarkHistory)
+            },
+            history: mergeHistories(portfolioHistory, benchmarkHistory)
+        };
+        
+        res.json({
+            success: true,
+            comparison
+        });
+        
+    } catch (error) {
+        console.error('组合对比分析失败:', error);
+        res.status(500).json({ error: '分析失败: ' + error.message });
+    }
+});
 });
 
 // 获取监控列表
@@ -407,10 +467,10 @@ app.post('/api/monitoring/refresh', async (req, res) => {
 
 // ============ 数据库操作 ============
 
-function savePortfolio(portfolio) {
+function savePortfolio(portfolio, userId = 1) {
     portfolio.forEach(stock => {
         // 先尝试更新，如果不存在则插入
-        db.get('SELECT id FROM portfolio WHERE symbol = ?', [stock.symbol], (err, row) => {
+        db.get('SELECT id FROM portfolio WHERE symbol = ? AND user_id = ?', [stock.symbol, userId], (err, row) => {
             if (err) {
                 console.error('查询持仓失败:', err.message);
                 return;
@@ -423,17 +483,17 @@ function savePortfolio(portfolio) {
                     price = ?, 
                     year_change = ?,
                     updated_at = CURRENT_TIMESTAMP
-                    WHERE symbol = ?`,
-                    [stock.shares, stock.price, stock.year_change, stock.symbol],
+                    WHERE symbol = ? AND user_id = ?`,
+                    [stock.shares, stock.price, stock.year_change, stock.symbol, userId],
                     (err) => {
                         if (err) console.error('更新持仓失败:', err.message);
                     }
                 );
             } else {
                 // 插入新记录
-                db.run(`INSERT INTO portfolio (symbol, name, market, shares, avg_cost, price, currency, year_change)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [stock.symbol, stock.name, stock.market, stock.shares, stock.avgCost, stock.price, stock.currency, stock.year_change],
+                db.run(`INSERT INTO portfolio (symbol, name, market, shares, avg_cost, price, currency, year_change, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [stock.symbol, stock.name, stock.market, stock.shares, stock.avgCost, stock.price, stock.currency, stock.year_change, userId],
                     (err) => {
                         if (err) console.error('插入持仓失败:', err.message);
                     }
@@ -555,6 +615,134 @@ function getPriceHistoryFromDB(symbol, days) {
             }
         );
     });
+}
+
+/**
+ * 计算组合历史净值
+ */
+async function calculatePortfolioHistory(portfolio, days) {
+    const histories = [];
+    
+    for (const stock of portfolio) {
+        const history = await dataService.getStockHistory(stock.symbol, days);
+        if (history.length > 0) {
+            histories.push({
+                symbol: stock.symbol,
+                shares: stock.shares,
+                history: history
+            });
+        }
+    }
+    
+    if (histories.length === 0) return [];
+    
+    // 按日期合并计算组合净值
+    const dates = histories[0].history.map(h => h.date);
+    
+    return dates.map(date => {
+        let totalValue = 0;
+        
+        histories.forEach(({ shares, history }) => {
+            const dayData = history.find(h => h.date === date);
+            if (dayData) {
+                totalValue += shares * dayData.close;
+            }
+        });
+        
+        return {
+            date,
+            value: totalValue
+        };
+    });
+}
+
+/**
+ * 计算总收益率
+ */
+function calculateTotalReturn(history) {
+    if (history.length < 2) return 0;
+    const start = history[0].value;
+    const end = history[history.length - 1].value;
+    return start > 0 ? ((end - start) / start * 100).toFixed(2) : 0;
+}
+
+/**
+ * 计算波动率
+ */
+function calculateVolatility(history) {
+    if (history.length < 2) return 0;
+    
+    const returns = [];
+    for (let i = 1; i < history.length; i++) {
+        const dailyReturn = (history[i].value - history[i-1].value) / history[i-1].value;
+        returns.push(dailyReturn);
+    }
+    
+    const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return (stdDev * Math.sqrt(252) * 100).toFixed(2); // 年化波动率
+}
+
+/**
+ * 计算最大回撤
+ */
+function calculateMaxDrawdown(history) {
+    if (history.length < 2) return 0;
+    
+    let maxDrawdown = 0;
+    let peak = history[0].value;
+    
+    for (const day of history) {
+        if (day.value > peak) {
+            peak = day.value;
+        }
+        const drawdown = (peak - day.value) / peak;
+        maxDrawdown = Math.max(maxDrawdown, drawdown);
+    }
+    
+    return (maxDrawdown * 100).toFixed(2);
+}
+
+/**
+ * 计算夏普比率
+ */
+function calculateSharpeRatio(history) {
+    if (history.length < 2) return 0;
+    
+    const totalReturn = parseFloat(calculateTotalReturn(history));
+    const volatility = parseFloat(calculateVolatility(history));
+    
+    // 假设无风险利率为 3%
+    const riskFreeRate = 3;
+    
+    return volatility > 0 ? ((totalReturn - riskFreeRate) / volatility).toFixed(2) : 0;
+}
+
+/**
+ * 获取基准名称
+ */
+function getBenchmarkName(symbol) {
+    const benchmarks = {
+        '000001.SH': '上证指数',
+        '399001.SZ': '深证成指',
+        '399006.SZ': '创业板指',
+        '000300.SH': '沪深300',
+        '000905.SH': '中证500'
+    };
+    return benchmarks[symbol] || symbol;
+}
+
+/**
+ * 合并历史数据
+ */
+function mergeHistories(portfolioHistory, benchmarkHistory) {
+    return portfolioHistory.map((day, index) => ({
+        date: day.date,
+        portfolio: day.value,
+        benchmark: benchmarkHistory[index]?.close || 0
+    }));
 }
 
 // ============ 监控提醒 API ============
