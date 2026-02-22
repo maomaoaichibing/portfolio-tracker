@@ -99,7 +99,16 @@ python3 scripts/maintenance.py cleanup --execute
 
 # Full maintenance cycle
 python3 scripts/maintenance.py maintenance --execute
+
+# Auto-archive (for cron - always executes)
+python3 scripts/maintenance.py auto-archive
 ```
+
+**Auto-archive features:**
+- Archives memories older than 30 days
+- Consolidates last 7 days to MEMORY.md
+- Removes empty files
+- Runs automatically via cron every Sunday at 2 AM
 
 ## Workflow: Finding Past Information
 
