@@ -1,0 +1,112 @@
+/**index.wxml**/
+<view class="page-container">
+  <!-- 未登录状态 -->
+  <view wx:if="{{!isLoggedIn}}" class="login-section">
+    <view class="welcome-card">
+      <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+      <text class="title">持仓智投</text>
+      <text class="subtitle">AI驱动的智能投资监控助手</text>
+      
+      <view class="features">
+        <view class="feature-item">
+          <text class="feature-icon">📸</text>
+          <text class="feature-text">拍照上传持仓</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🤖</text>
+          <text class="feature-text">AI智能分析</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">📊</text>
+          <text class="feature-text">实时监控提醒</text>
+        </view>
+      </view>
+      
+      <button class="btn-primary login-btn" bindtap="handleLogin">
+        微信一键登录
+      </button>
+    </view>
+  </view>
+
+  <!-- 已登录状态 -->
+  <view wx:else class="dashboard">
+    <!-- 统计卡片 -->
+    <view class="stats-section">
+      <view class="stat-card">
+        <text class="stat-value {{totalPnL >= 0 ? 'text-success' : 'text-danger'}}">
+          {{totalPnL >= 0 ? '+' : ''}}{{totalPnL}}%
+        </text>
+        <text class="stat-label">今日盈亏</text>
+      </view>
+      
+      <view class="stat-card">
+        <text class="stat-value">{{portfolioCount}}</text>
+        <text class="stat-label">持仓数量</text>
+      </view>
+      
+      <view class="stat-card">
+        <text class="stat-value text-warning">{{alertCount}}</text>
+        <text class="stat-label">待处理提醒</text>
+      </view>
+    </view>
+
+    <!-- 快捷操作 -->
+    <view class="card">
+      <text class="card-title">快捷操作</text>
+      
+      <view class="quick-actions">
+        <view class="action-item" bindtap="uploadPortfolio">
+          <view class="action-icon upload">📸</view>
+          <text class="action-text">上传持仓</text>
+        </view>
+        
+        <view class="action-item" bindtap="viewAnalysis">
+          <view class="action-icon analysis">📈</view>
+          <text class="action-text">查看分析</text>
+        </view>
+        
+        <view class="action-item" bindtap="refreshData">
+          <view class="action-icon refresh">🔄</view>
+          <text class="action-text">刷新数据</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最新提醒 -->
+    <view class="card" wx:if="{{recentAlerts.length > 0}}">
+      <view class="flex-between">
+        <text class="card-title">最新提醒</text>
+        <text class="text-primary" bindtap="viewAllAlerts">查看全部></text>
+      </view>
+      
+      <view class="alert-list">
+        <view wx:for="{{recentAlerts}}" wx:key="id" class="alert-item">
+          <view class="alert-dot {{item.priority}}"></view>
+          <view class="alert-content">
+            <text class="alert-title">{{item.title}}</text>
+            <text class="alert-time">{{item.time}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最近新闻 -->
+    <view class="card" wx:if="{{recentNews.length > 0}}">
+      <view class="flex-between">
+        <text class="card-title">持仓相关新闻</text>
+        <text class="text-primary" bindtap="viewAllNews">查看全部></text>
+      </view>
+      
+      <view class="news-list">
+        <view wx:for="{{recentNews}}" wx:key="id" class="news-item" bindtap="openNews" data-url="{{item.url}}">
+          <text class="news-title">{{item.title}}</text>
+          <view class="news-meta">
+            <text class="news-source">{{item.source}}</text>
+            <text class="news-time">{{item.time}}</text>
+            <text wx:if="{{item.isImportant}}" class="news-tag important">重要</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

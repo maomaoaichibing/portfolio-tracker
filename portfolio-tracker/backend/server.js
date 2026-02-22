@@ -18,6 +18,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// 小程序路由
+const wxRoutes = require('./wx-routes');
+app.use('/api/wx', wxRoutes);
+
 // 文件上传配置
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -120,6 +124,21 @@ db.serialize(() => {
     db.run(`CREATE INDEX IF NOT EXISTS idx_price_history_symbol ON price_history(symbol)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_price_history_date ON price_history(date)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_news_symbol ON news(symbol)`);
+
+    /* 用户表（小程序登录用） */
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        openid TEXT UNIQUE NOT NULL,
+        unionid TEXT,
+        nickname TEXT,
+        avatar TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_login DATETIME
+    )`);
+
+    /* 添加 user_id 到现有表 */
+    db.run(`ALTER TABLE portfolio ADD COLUMN user_id INTEGER DEFAULT 1`);
+    db.run(`ALTER TABLE alerts ADD COLUMN user_id INTEGER DEFAULT 1`);
 });
 
 // ============ API 路由 ============
