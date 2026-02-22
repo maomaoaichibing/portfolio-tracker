@@ -163,9 +163,27 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    /* 添加 user_id 到现有表 */
-    db.run(`ALTER TABLE portfolio ADD COLUMN user_id INTEGER DEFAULT 1`);
-    db.run(`ALTER TABLE alerts ADD COLUMN user_id INTEGER DEFAULT 1`);
+    /* 添加 user_id 到现有表（如果还不存在） */
+    db.all("PRAGMA table_info(portfolio)", [], (err, rows) => {
+        if (!err && !rows.find(r => r.name === 'user_id')) {
+            db.run(`ALTER TABLE portfolio ADD COLUMN user_id INTEGER DEFAULT 1`);
+        }
+    });
+    db.all("PRAGMA table_info(alerts)", [], (err, rows) => {
+        if (!err && !rows.find(r => r.name === 'user_id')) {
+            db.run(`ALTER TABLE alerts ADD COLUMN user_id INTEGER DEFAULT 1`);
+        }
+    });
+    db.all("PRAGMA table_info(analysis)", [], (err, rows) => {
+        if (!err && !rows.find(r => r.name === 'user_id')) {
+            db.run(`ALTER TABLE analysis ADD COLUMN user_id INTEGER DEFAULT 1`);
+        }
+    });
+    db.all("PRAGMA table_info(monitoring)", [], (err, rows) => {
+        if (!err && !rows.find(r => r.name === 'user_id')) {
+            db.run(`ALTER TABLE monitoring ADD COLUMN user_id INTEGER DEFAULT 1`);
+        }
+    });
 });
 
 // ============ API 路由 ============
