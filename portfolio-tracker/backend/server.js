@@ -138,6 +138,31 @@ db.serialize(() => {
         last_login DATETIME
     )`);
 
+    /* 研报分析表 */
+    db.run(`CREATE TABLE IF NOT EXISTS research_analysis (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER DEFAULT 1,
+        symbol TEXT,
+        source TEXT,
+        content_summary TEXT,
+        summary TEXT,
+        key_points TEXT,
+        risks TEXT,
+        outlook TEXT,
+        sentiment TEXT DEFAULT 'neutral',
+        rating TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    /* 对话历史表 */
+    db.run(`CREATE TABLE IF NOT EXISTS chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER DEFAULT 1,
+        message TEXT NOT NULL,
+        reply TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     /* 添加 user_id 到现有表 */
     db.run(`ALTER TABLE portfolio ADD COLUMN user_id INTEGER DEFAULT 1`);
     db.run(`ALTER TABLE alerts ADD COLUMN user_id INTEGER DEFAULT 1`);
@@ -365,7 +390,1361 @@ app.get('/api/portfolio/comparison', authenticateToken, async (req, res) => {
         res.status(500).json({ error: '分析失败: ' + error.message });
     }
 });
+
+// 组合诊断报告（智能投顾核心功能）
+app.get('/api/portfolio/diagnosis', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        
+        // 获取用户持仓
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio WHERE user_id = ?', [userId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        if (!portfolio || portfolio.length === 0) {
+            return res.json({
+                success: true,
+                diagnosis: {
+                    overallScore: 0,
+                    riskLevel: 'none',
+                    message: '暂无持仓数据，请先添加持仓'
+                }
+            });
+        }
+        
+        // 计算诊断指标
+        const diagnosis = await calculatePortfolioDiagnosis(portfolio, userId);
+        
+        res.json({
+            success: true,
+            diagnosis
+        });
+        
+    } catch (error) {
+        console.error('组合诊断失败:', error);
+        res.status(500).json({ error: '诊断失败: ' + error.message });
+    }
 });
+
+// 计算组合诊断指标
+async function calculatePortfolioDiagnosis(portfolio, userId) {
+    const totalValue = portfolio.reduce((sum, s) => sum + (s.shares * (s.price || s.avg_cost || 0)), 0);
+    
+    // 1. 集中度分析
+    const concentration = analyzeConcentration(portfolio, totalValue);
+    
+    // 2. 风险评分
+    const riskAnalysis = analyzeRisk(portfolio);
+    
+    // 3. 行业分布
+    const sectorDistribution = await analyzeSectorDistribution(portfolio);
+    
+    // 4. 流动性分析
+    const liquidityAnalysis = analyzeLiquidity(portfolio);
+    
+    // 5. 生成优化建议
+    const suggestions = generateOptimizationSuggestions(portfolio, concentration, riskAnalysis, sectorDistribution);
+    
+    // 6. 综合评分 (0-100)
+    const overallScore = calculateOverallScore(concentration, riskAnalysis, sectorDistribution, liquidityAnalysis);
+    
+    // 7. 风险等级
+    const riskLevel = determineRiskLevel(overallScore, riskAnalysis);
+    
+    return {
+        overallScore,
+        riskLevel,
+        riskLevelText: getRiskLevelText(riskLevel),
+        totalValue,
+        stockCount: portfolio.length,
+        concentration,
+        riskAnalysis,
+        sectorDistribution,
+        liquidityAnalysis,
+        suggestions,
+        generatedAt: new Date().toISOString()
+    };
+}
+
+// 集中度分析
+function analyzeConcentration(portfolio, totalValue) {
+    const weights = portfolio.map(s => ({
+        symbol: s.symbol,
+        name: s.name,
+        weight: ((s.shares * (s.price || s.avg_cost || 0)) / totalValue * 100).toFixed(2),
+        value: s.shares * (s.price || s.avg_cost || 0)
+    })).sort((a, b) => b.weight - a.weight);
+    
+    const topHolding = weights[0];
+    const top3Weight = weights.slice(0, 3).reduce((sum, w) => sum + parseFloat(w.weight), 0);
+    const top5Weight = weights.slice(0, 5).reduce((sum, w) => sum + parseFloat(w.weight), 0);
+    
+    // 集中度风险等级
+    let concentrationRisk = 'low';
+    if (topHolding.weight > 50) concentrationRisk = 'high';
+    else if (topHolding.weight > 30) concentrationRisk = 'medium';
+    
+    return {
+        holdings: weights,
+        topHolding,
+        top3Concentration: top3Weight.toFixed(2),
+        top5Concentration: top5Weight.toFixed(2),
+        concentrationRisk,
+        isDiversified: topHolding.weight <= 30 && portfolio.length >= 5
+    };
+}
+
+// 风险分析
+function analyzeRisk(portfolio) {
+    const yearChanges = portfolio.map(s => s.year_change || 0);
+    const avgChange = yearChanges.reduce((a, b) => a + b, 0) / yearChanges.length;
+    const volatility = Math.sqrt(yearChanges.reduce((sq, n) => sq + Math.pow(n - avgChange, 2), 0) / yearChanges.length);
+    
+    // 最大回撤估算
+    const maxYearChange = Math.max(...yearChanges);
+    const minYearChange = Math.min(...yearChanges);
+    const estimatedDrawdown = maxYearChange - minYearChange;
+    
+    // 风险评分 (0-100，越低越好)
+    let riskScore = 50;
+    if (volatility > 50) riskScore += 20;
+    else if (volatility > 30) riskScore += 10;
+    
+    if (estimatedDrawdown > 80) riskScore += 20;
+    else if (estimatedDrawdown > 50) riskScore += 10;
+    
+    // 根据涨跌幅调整
+    const negativeCount = yearChanges.filter(c => c < 0).length;
+    if (negativeCount / yearChanges.length > 0.5) riskScore += 10;
+    
+    return {
+        score: Math.min(100, riskScore),
+        volatility: volatility.toFixed(2),
+        estimatedDrawdown: estimatedDrawdown.toFixed(2),
+        avgYearChange: avgChange.toFixed(2),
+        negativeStockCount: negativeCount,
+        riskFactors: identifyRiskFactors(portfolio, volatility, estimatedDrawdown)
+    };
+}
+
+// 识别风险因素
+function identifyRiskFactors(portfolio, volatility, drawdown) {
+    const factors = [];
+    
+    if (volatility > 40) {
+        factors.push({
+            type: 'volatility',
+            level: 'high',
+            description: '组合波动率较高，短期内可能出现较大涨跌'
+        });
+    }
+    
+    if (drawdown > 60) {
+        factors.push({
+            type: 'drawdown',
+            level: 'high',
+            description: '持仓个股年内表现差异大，存在较大回撤风险'
+        });
+    }
+    
+    const negativeStocks = portfolio.filter(s => (s.year_change || 0) < -20);
+    if (negativeStocks.length > 0) {
+        factors.push({
+            type: 'underperforming',
+            level: 'medium',
+            description: `有 ${negativeStocks.length} 只持仓年内跌幅超过20%，需关注`
+        });
+    }
+    
+    if (portfolio.length < 5) {
+        factors.push({
+            type: 'concentration',
+            level: 'medium',
+            description: '持仓数量较少，分散度不足'
+        });
+    }
+    
+    return factors;
+}
+
+// 行业分布分析
+async function analyzeSectorDistribution(portfolio) {
+    // 简化版：基于股票代码前缀判断行业
+    const sectorMap = {
+        '60': '金融',
+        '00': '消费',
+        '30': '科技',
+        '68': '科技',
+        '8': '北交所',
+        '9': '北交所'
+    };
+    
+    const sectors = {};
+    portfolio.forEach(s => {
+        const prefix = s.symbol.substring(0, 2);
+        const sector = sectorMap[prefix] || '其他';
+        if (!sectors[sector]) sectors[sector] = { count: 0, value: 0, symbols: [] };
+        sectors[sector].count++;
+        sectors[sector].value += s.shares * (s.price || s.avg_cost || 0);
+        sectors[sector].symbols.push(s.symbol);
+    });
+    
+    // 转换为数组并排序
+    const sectorArray = Object.entries(sectors).map(([name, data]) => ({
+        name,
+        count: data.count,
+        value: data.value,
+        symbols: data.symbols
+    })).sort((a, b) => b.value - a.value);
+    
+    // 检查行业集中度
+    const topSector = sectorArray[0];
+    const sectorRisk = topSector && (topSector.value / portfolio.reduce((sum, s) => sum + s.shares * (s.price || s.avg_cost || 0), 0)) > 0.5 ? 'high' : 'low';
+    
+    return {
+        sectors: sectorArray,
+        topSector: topSector ? topSector.name : null,
+        sectorRisk,
+        isBalanced: sectorArray.length >= 3
+    };
+}
+
+// 流动性分析
+function analyzeLiquidity(portfolio) {
+    const totalShares = portfolio.reduce((sum, s) => sum + s.shares, 0);
+    const avgPosition = totalShares / portfolio.length;
+    
+    // 检查是否有异常大仓位
+    const largePositions = portfolio.filter(s => s.shares > avgPosition * 3);
+    
+    return {
+        totalShares: totalShares.toFixed(0),
+        averagePosition: avgPosition.toFixed(0),
+        largePositionCount: largePositions.length,
+        liquidityRisk: largePositions.length > 0 ? 'medium' : 'low'
+    };
+}
+
+// 生成优化建议
+function generateOptimizationSuggestions(portfolio, concentration, riskAnalysis, sectorDistribution) {
+    const suggestions = [];
+    
+    // 集中度建议
+    if (concentration.concentrationRisk === 'high') {
+        suggestions.push({
+            priority: 'high',
+            category: 'concentration',
+            title: '降低单一持仓集中度',
+            description: `${concentration.topHolding.name} 占组合 ${concentration.topHolding.weight}%，建议逐步减仓至30%以下`,
+            action: 'consider_reduce',
+            target: concentration.topHolding.symbol
+        });
+    } else if (!concentration.isDiversified) {
+        suggestions.push({
+            priority: 'medium',
+            category: 'concentration',
+            title: '增加持仓分散度',
+            description: `当前持仓 ${portfolio.length} 只，建议分散至5-10只不同行业股票`,
+            action: 'diversify'
+        });
+    }
+    
+    // 风险建议
+    if (riskAnalysis.score > 70) {
+        suggestions.push({
+            priority: 'high',
+            category: 'risk',
+            title: '降低组合风险',
+            description: `当前风险评分 ${riskAnalysis.score}/100，建议增加防御性资产配置`,
+            action: 'reduce_risk'
+        });
+    }
+    
+    // 行业建议
+    if (sectorDistribution.sectorRisk === 'high') {
+        suggestions.push({
+            priority: 'medium',
+            category: 'sector',
+            title: '分散行业配置',
+            description: `${sectorDistribution.topSector} 行业占比过高，建议配置其他行业`,
+            action: 'sector_balance'
+        });
+    }
+    
+    // 表现不佳股票建议
+    const underperforming = portfolio.filter(s => (s.year_change || 0) < -30);
+    if (underperforming.length > 0) {
+        suggestions.push({
+            priority: 'medium',
+            category: 'performance',
+            title: '关注表现不佳持仓',
+            description: `${underperforming.map(s => s.name).join('、')} 年内跌幅较大，建议评估是否继续持有`,
+            action: 'review',
+            targets: underperforming.map(s => s.symbol)
+        });
+    }
+    
+    // 正面建议
+    if (concentration.isDiversified && riskAnalysis.score < 50) {
+        suggestions.push({
+            priority: 'low',
+            category: 'positive',
+            title: '组合配置良好',
+            description: '当前组合分散度适中，风险可控，建议定期监控即可',
+            action: 'monitor'
+        });
+    }
+    
+    return suggestions.sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+}
+
+// 计算综合评分
+function calculateOverallScore(concentration, riskAnalysis, sectorDistribution, liquidityAnalysis) {
+    let score = 70; // 基础分
+    
+    // 集中度加分/扣分
+    if (concentration.isDiversified) score += 10;
+    else if (concentration.concentrationRisk === 'high') score -= 15;
+    
+    // 风险扣分
+    score -= (riskAnalysis.score - 50) * 0.3;
+    
+    // 行业分散加分
+    if (sectorDistribution.isBalanced) score += 5;
+    else if (sectorDistribution.sectorRisk === 'high') score -= 10;
+    
+    // 流动性
+    if (liquidityAnalysis.liquidityRisk === 'medium') score -= 5;
+    
+    return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// 确定风险等级
+function determineRiskLevel(overallScore, riskAnalysis) {
+    if (overallScore >= 80) return 'low';
+    if (overallScore >= 60) return 'medium';
+    if (riskAnalysis.score > 80) return 'very_high';
+    return 'high';
+}
+
+// 风险等级文本
+function getRiskLevelText(level) {
+    const texts = {
+        low: '低风险',
+        medium: '中等风险',
+        high: '高风险',
+        very_high: '极高风险',
+        none: '无风险'
+    };
+    return texts[level] || '未知';
+}
+
+// 动态调仓建议 API
+app.post('/api/portfolio/rebalance', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { targetRisk, constraints } = req.body;
+        
+        // 获取用户持仓
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio WHERE user_id = ?', [userId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        if (!portfolio || portfolio.length === 0) {
+            return res.status(400).json({ error: '暂无持仓数据' });
+        }
+        
+        // 生成调仓建议
+        const rebalanceAdvice = await generateRebalanceAdvice(portfolio, targetRisk, constraints);
+        
+        res.json({
+            success: true,
+            advice: rebalanceAdvice
+        });
+        
+    } catch (error) {
+        console.error('生成调仓建议失败:', error);
+        res.status(500).json({ error: '生成调仓建议失败: ' + error.message });
+    }
+});
+
+// 生成调仓建议
+async function generateRebalanceAdvice(portfolio, targetRisk = 'medium', constraints = {}) {
+    const totalValue = portfolio.reduce((sum, s) => sum + (s.shares * (s.price || s.avg_cost || 0)), 0);
+    
+    // 1. 分析当前组合
+    const currentAnalysis = {
+        totalValue,
+        stockCount: portfolio.length,
+        avgWeight: 100 / portfolio.length,
+        riskStocks: portfolio.filter(s => (s.year_change || 0) < -20),
+        highWeightStocks: portfolio.filter(s => {
+            const weight = (s.shares * (s.price || s.avg_cost || 0)) / totalValue * 100;
+            return weight > 30;
+        })
+    };
+    
+    // 2. 计算目标权重
+    const targetWeights = calculateTargetWeights(portfolio, targetRisk);
+    
+    // 3. 生成具体建议
+    const trades = [];
+    const holds = [];
+    
+    portfolio.forEach(stock => {
+        const currentValue = stock.shares * (stock.price || stock.avg_cost || 0);
+        const currentWeight = (currentValue / totalValue * 100);
+        const targetWeight = targetWeights[stock.symbol] || currentWeight;
+        const targetValue = totalValue * (targetWeight / 100);
+        const diffValue = targetValue - currentValue;
+        const diffPercent = targetWeight - currentWeight;
+        
+        if (Math.abs(diffPercent) > 5) {
+            // 需要调仓
+            const action = diffPercent > 0 ? 'buy' : 'sell';
+            const shares = Math.abs(Math.round(diffValue / (stock.price || stock.avg_cost || 1)));
+            
+            if (shares > 0) {
+                trades.push({
+                    symbol: stock.symbol,
+                    name: stock.name,
+                    action,
+                    shares,
+                    estimatedValue: Math.abs(diffValue).toFixed(2),
+                    reason: generateTradeReason(stock, action, diffPercent),
+                    priority: Math.abs(diffPercent) > 15 ? 'high' : 'medium'
+                });
+            }
+        } else {
+            // 保持
+            holds.push({
+                symbol: stock.symbol,
+                name: stock.name,
+                currentWeight: currentWeight.toFixed(2),
+                reason: '权重在合理范围内，建议保持'
+            });
+        }
+    });
+    
+    // 4. 生成策略说明
+    const strategy = generateRebalanceStrategy(portfolio, targetRisk, currentAnalysis);
+    
+    // 5. 风险评估
+    const riskAssessment = assessRebalanceRisk(trades, portfolio);
+    
+    return {
+        currentAnalysis,
+        targetRisk,
+        trades: trades.sort((a, b) => {
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }),
+        holds,
+        strategy,
+        riskAssessment,
+        estimatedImpact: calculateEstimatedImpact(trades, portfolio, totalValue),
+        generatedAt: new Date().toISOString()
+    };
+}
+
+// 计算目标权重
+function calculateTargetWeights(portfolio, targetRisk) {
+    const weights = {};
+    const totalValue = portfolio.reduce((sum, s) => sum + (s.shares * (s.price || s.avg_cost || 0)), 0);
+    
+    // 基于风险等级和风险因子计算权重
+    portfolio.forEach(stock => {
+        const currentValue = stock.shares * (stock.price || stock.avg_cost || 0);
+        const currentWeight = (currentValue / totalValue * 100);
+        const yearChange = stock.year_change || 0;
+        
+        let targetWeight = currentWeight;
+        
+        // 根据风险等级调整
+        if (targetRisk === 'low') {
+            // 降低高风险股票权重
+            if (yearChange < -20) {
+                targetWeight = Math.max(5, currentWeight * 0.7);
+            } else if (yearChange > 50) {
+                // 止盈：降低涨幅过大的股票权重
+                targetWeight = Math.max(10, currentWeight * 0.85);
+            }
+        } else if (targetRisk === 'high') {
+            // 增加高增长股票权重
+            if (yearChange > 30) {
+                targetWeight = Math.min(25, currentWeight * 1.2);
+            }
+        }
+        
+        // 确保单只股票不超过30%
+        targetWeight = Math.min(30, targetWeight);
+        
+        weights[stock.symbol] = targetWeight;
+    });
+    
+    // 归一化到100%
+    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+    Object.keys(weights).forEach(symbol => {
+        weights[symbol] = (weights[symbol] / totalWeight * 100);
+    });
+    
+    return weights;
+}
+
+// 生成交易理由
+function generateTradeReason(stock, action, diffPercent) {
+    const yearChange = stock.year_change || 0;
+    
+    if (action === 'sell') {
+        if (yearChange < -20) {
+            return `年内跌幅 ${yearChange.toFixed(1)}%，建议减仓止损`;
+        } else if (yearChange > 50) {
+            return `年内涨幅 ${yearChange.toFixed(1)}%，建议适当止盈`;
+        } else {
+            return `当前权重过高，建议减仓以分散风险`;
+        }
+    } else {
+        if (yearChange > 0 && yearChange < 30) {
+            return `表现稳健，建议适当加仓`;
+        } else if (yearChange < -10) {
+            return `估值较低，建议逢低加仓`;
+        } else {
+            return `建议加仓以达到目标配置比例`;
+        }
+    }
+}
+
+// 生成调仓策略说明
+function generateRebalanceStrategy(portfolio, targetRisk, currentAnalysis) {
+    const strategies = {
+        low: {
+            name: '稳健型策略',
+            description: '以降低波动、控制回撤为主要目标',
+            actions: [
+                '减仓跌幅超过20%的股票，控制单只持仓不超过20%',
+                '适当止盈涨幅超过50%的股票',
+                '保持现金比例不低于10%'
+            ]
+        },
+        medium: {
+            name: '平衡型策略',
+            description: '在收益和风险之间寻求平衡',
+            actions: [
+                '分散持仓，单只股票权重控制在15-25%',
+                '定期再平衡，保持目标配置',
+                '关注基本面变化，及时调整'
+            ]
+        },
+        high: {
+            name: '积极型策略',
+            description: '追求更高收益，承受较大波动',
+            actions: [
+                '增加高增长股票配置',
+                '容忍单只股票最高30%权重',
+                '积极把握市场机会'
+            ]
+        }
+    };
+    
+    return strategies[targetRisk] || strategies.medium;
+}
+
+// 评估调仓风险
+function assessRebalanceRisk(trades, portfolio) {
+    const sellTrades = trades.filter(t => t.action === 'sell');
+    const buyTrades = trades.filter(t => t.action === 'buy');
+    
+    const totalSellValue = sellTrades.reduce((sum, t) => sum + parseFloat(t.estimatedValue), 0);
+    const totalBuyValue = buyTrades.reduce((sum, t) => sum + parseFloat(t.estimatedValue), 0);
+    
+    const totalValue = portfolio.reduce((sum, s) => sum + (s.shares * (s.price || s.avg_cost || 0)), 0);
+    const turnoverRate = (totalSellValue + totalBuyValue) / 2 / totalValue * 100;
+    
+    let riskLevel = 'low';
+    if (turnoverRate > 50) riskLevel = 'high';
+    else if (turnoverRate > 30) riskLevel = 'medium';
+    
+    return {
+        turnoverRate: turnoverRate.toFixed(2),
+        riskLevel,
+        sellCount: sellTrades.length,
+        buyCount: buyTrades.length,
+        totalSellValue: totalSellValue.toFixed(2),
+        totalBuyValue: totalBuyValue.toFixed(2),
+        warnings: generateRebalanceWarnings(trades, turnoverRate)
+    };
+}
+
+// 生成调仓警告
+function generateRebalanceWarnings(trades, turnoverRate) {
+    const warnings = [];
+    
+    if (turnoverRate > 50) {
+        warnings.push({
+            type: 'high_turnover',
+            message: '调仓比例过高，可能产生较大交易成本',
+            suggestion: '建议分批次执行，或适当减少调仓幅度'
+        });
+    }
+    
+    const highPriorityTrades = trades.filter(t => t.priority === 'high');
+    if (highPriorityTrades.length > 3) {
+        warnings.push({
+            type: 'many_changes',
+            message: `有 ${highPriorityTrades.length} 项高优先级调仓建议`,
+            suggestion: '建议优先处理高优先级项目，逐步调整'
+        });
+    }
+    
+    return warnings;
+}
+
+// 计算预估影响
+function calculateEstimatedImpact(trades, portfolio, totalValue) {
+    const sellTrades = trades.filter(t => t.action === 'sell');
+    const buyTrades = trades.filter(t => t.action === 'buy');
+    
+    const sellValue = sellTrades.reduce((sum, t) => sum + parseFloat(t.estimatedValue), 0);
+    const buyValue = buyTrades.reduce((sum, t) => sum + parseFloat(t.estimatedValue), 0);
+    
+    // 估算交易成本 (0.1% 佣金 + 0.1% 印花税)
+    const estimatedCost = (sellValue + buyValue) * 0.002;
+    
+    return {
+        estimatedSellValue: sellValue.toFixed(2),
+        estimatedBuyValue: buyValue.toFixed(2),
+        estimatedTransactionCost: estimatedCost.toFixed(2),
+        netCashFlow: (sellValue - buyValue).toFixed(2),
+        newStockCount: portfolio.length + buyTrades.length - sellTrades.filter(t => t.shares >= portfolio.find(s => s.symbol === t.symbol)?.shares).length
+    };
+}
+
+// 智能问答系统 API
+app.post('/api/ai/chat', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { question } = req.body;
+        
+        if (!question || question.trim().length === 0) {
+            return res.status(400).json({ error: '请输入问题' });
+        }
+        
+        // 解析用户意图
+        const intent = parseUserIntent(question);
+        
+        // 获取相关数据
+        const contextData = await getContextData(userId, intent);
+        
+        // 生成回答
+        const answer = await generateAnswer(question, intent, contextData);
+        
+        res.json({
+            success: true,
+            question,
+            answer,
+            intent: intent.type,
+            relatedData: contextData
+        });
+        
+    } catch (error) {
+        console.error('智能问答失败:', error);
+        res.status(500).json({ error: '问答失败: ' + error.message });
+    }
+});
+
+// 解析用户意图
+function parseUserIntent(question) {
+    const lowerQuestion = question.toLowerCase();
+    
+    // 定义意图模式
+    const intents = [
+        {
+            type: 'portfolio_status',
+            patterns: ['持仓', '我的股票', '组合', '仓位', '买了什么', '持有'],
+            confidence: 0
+        },
+        {
+            type: 'risk_assessment',
+            patterns: ['风险', '安全吗', '危险', '会不会跌', '回撤'],
+            confidence: 0
+        },
+        {
+            type: 'stock_analysis',
+            patterns: ['怎么样', '分析', '看好', '能买吗', '建议'],
+            confidence: 0
+        },
+        {
+            type: 'market_overview',
+            patterns: ['市场', '行情', '大盘', '走势', '今天'],
+            confidence: 0
+        },
+        {
+            type: 'performance_query',
+            patterns: ['收益', '赚', '亏', '表现', '涨跌', '多少'],
+            confidence: 0
+        },
+        {
+            type: 'recommendation',
+            patterns: ['推荐', '买什么', '建议', '选什么', '哪个好'],
+            confidence: 0
+        }
+    ];
+    
+    // 计算每个意图的匹配度
+    intents.forEach(intent => {
+        intent.patterns.forEach(pattern => {
+            if (lowerQuestion.includes(pattern)) {
+                intent.confidence += 1;
+            }
+        });
+    });
+    
+    // 选择最匹配的意图
+    const bestIntent = intents.reduce((best, current) => 
+        current.confidence > best.confidence ? current : best
+    );
+    
+    // 提取股票代码（如果有）
+    const stockMatch = question.match(/(\d{6})/);
+    const stockSymbol = stockMatch ? stockMatch[1] : null;
+    
+    return {
+        type: bestIntent.confidence > 0 ? bestIntent.type : 'general',
+        confidence: bestIntent.confidence,
+        stockSymbol,
+        originalQuestion: question
+    };
+}
+
+// 获取上下文数据
+async function getContextData(userId, intent) {
+    const data = {};
+    
+    try {
+        // 获取用户持仓
+        const portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio WHERE user_id = ?', [userId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        data.portfolio = portfolio;
+        data.totalValue = portfolio.reduce((sum, s) => 
+            sum + (s.shares * (s.price || s.avg_cost || 0)), 0
+        );
+        
+        // 根据意图获取额外数据
+        if (intent.type === 'risk_assessment' || intent.type === 'portfolio_status') {
+            // 获取最新诊断
+            data.diagnosis = await calculatePortfolioDiagnosis(portfolio, userId);
+        }
+        
+        if (intent.stockSymbol) {
+            // 获取特定股票信息
+            const stock = portfolio.find(s => s.symbol === intent.stockSymbol);
+            data.targetStock = stock;
+            
+            // 获取分析记录
+            const analysis = await new Promise((resolve, reject) => {
+                db.get('SELECT * FROM analysis WHERE symbol = ? AND user_id = ? ORDER BY created_at DESC LIMIT 1',
+                    [intent.stockSymbol, userId],
+                    (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row);
+                    }
+                );
+            });
+            data.stockAnalysis = analysis;
+        }
+        
+    } catch (error) {
+        console.error('获取上下文数据失败:', error);
+    }
+    
+    return data;
+}
+
+// 生成回答
+async function generateAnswer(question, intent, contextData) {
+    const { portfolio, totalValue, diagnosis, targetStock, stockAnalysis } = contextData;
+    
+    // 根据意图类型生成回答
+    switch (intent.type) {
+        case 'portfolio_status':
+            return generatePortfolioStatusAnswer(portfolio, totalValue);
+        
+        case 'risk_assessment':
+            return generateRiskAnswer(diagnosis);
+        
+        case 'stock_analysis':
+            return generateStockAnswer(targetStock, stockAnalysis);
+        
+        case 'performance_query':
+            return generatePerformanceAnswer(portfolio, totalValue);
+        
+        case 'recommendation':
+            return generateRecommendationAnswer(portfolio, diagnosis);
+        
+        case 'market_overview':
+            return generateMarketOverviewAnswer(portfolio);
+        
+        default:
+            return generateGeneralAnswer(question, contextData);
+    }
+}
+
+// 生成持仓状态回答
+function generatePortfolioStatusAnswer(portfolio, totalValue) {
+    if (!portfolio || portfolio.length === 0) {
+        return '您当前没有持仓。可以通过上传持仓截图或手动添加股票来开始。';
+    }
+    
+    const stockList = portfolio.map(s => 
+        `${s.name}(${s.symbol}): ${s.shares}股, 现价${s.price || s.avg_cost || 0}元`
+    ).join('\n');
+    
+    const avgChange = portfolio.reduce((sum, s) => sum + (s.year_change || 0), 0) / portfolio.length;
+    const trend = avgChange >= 0 ? '上涨' : '下跌';
+    
+    return `您当前持有 ${portfolio.length} 只股票，总市值约 ${totalValue.toFixed(2)} 元。
+
+持仓明细：
+${stockList}
+
+整体年内平均${trend} ${Math.abs(avgChange).toFixed(2)}%。`;
+}
+
+// 生成风险回答
+function generateRiskAnswer(diagnosis) {
+    if (!diagnosis) {
+        return '暂无风险分析数据，请先生成组合诊断报告。';
+    }
+    
+    const { overallScore, riskLevelText, riskAnalysis, concentration } = diagnosis;
+    
+    let answer = `组合风险评分：${overallScore}/100，风险等级：${riskLevelText}。\n\n`;
+    
+    if (riskAnalysis && riskAnalysis.riskFactors && riskAnalysis.riskFactors.length > 0) {
+        answer += '主要风险因素：\n';
+        riskAnalysis.riskFactors.forEach(factor => {
+            const levelEmoji = factor.level === 'high' ? '🔴' : factor.level === 'medium' ? '🟡' : '🟢';
+            answer += `${levelEmoji} ${factor.description}\n`;
+        });
+    }
+    
+    if (concentration && concentration.concentrationRisk === 'high') {
+        answer += `\n⚠️ 集中度风险：${concentration.topHolding.name} 占比 ${concentration.topHolding.weight}%，建议适当分散。`;
+    }
+    
+    return answer;
+}
+
+// 生成股票分析回答
+function generateStockAnswer(stock, analysis) {
+    if (!stock) {
+        return '未找到该股票的持仓信息。';
+    }
+    
+    let answer = `${stock.name}(${stock.symbol}) 持仓分析：\n\n`;
+    answer += `持有数量：${stock.shares} 股\n`;
+    answer += `当前价格：${stock.price || stock.avg_cost || 0} 元\n`;
+    answer += `年内涨跌：${stock.year_change || 0}%\n`;
+    
+    if (analysis) {
+        answer += `\nAI 分析摘要：${analysis.trend_summary || '暂无分析'}\n`;
+    }
+    
+    // 给出简单建议
+    if ((stock.year_change || 0) < -20) {
+        answer += '\n⚠️ 该股票年内跌幅较大，建议关注基本面变化，考虑是否继续持有。';
+    } else if ((stock.year_change || 0) > 50) {
+        answer += '\n📈 该股票表现优异，可考虑适当止盈。';
+    } else {
+        answer += '\n✅ 该股票表现正常，建议继续观察。';
+    }
+    
+    return answer;
+}
+
+// 生成收益回答
+function generatePerformanceAnswer(portfolio, totalValue) {
+    if (!portfolio || portfolio.length === 0) {
+        return '暂无持仓数据。';
+    }
+    
+    const totalCost = portfolio.reduce((sum, s) => 
+        sum + (s.shares * (s.avg_cost || s.price || 0)), 0
+    );
+    const unrealizedPnL = totalValue - totalCost;
+    const pnlPercent = totalCost > 0 ? (unrealizedPnL / totalCost * 100) : 0;
+    
+    const emoji = unrealizedPnL >= 0 ? '📈' : '📉';
+    const status = unrealizedPnL >= 0 ? '盈利' : '亏损';
+    
+    return `${emoji} 当前持仓${status} ${Math.abs(unrealizedPnL).toFixed(2)} 元 (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)\n\n` +
+        `总市值：${totalValue.toFixed(2)} 元\n` +
+        `总成本：${totalCost.toFixed(2)} 元\n\n` +
+        `表现最好：${getBestPerformer(portfolio)}\n` +
+        `表现最差：${getWorstPerformer(portfolio)}`;
+}
+
+// 生成推荐回答
+function generateRecommendationAnswer(portfolio, diagnosis) {
+    if (!diagnosis || !diagnosis.suggestions || diagnosis.suggestions.length === 0) {
+        return '暂无具体推荐建议。建议先生成组合诊断报告。';
+    }
+    
+    const highPriority = diagnosis.suggestions.filter(s => s.priority === 'high');
+    
+    let answer = '基于当前组合分析，建议关注以下方面：\n\n';
+    
+    if (highPriority.length > 0) {
+        answer += '🔴 高优先级：\n';
+        highPriority.forEach(s => {
+            answer += `• ${s.title}：${s.description}\n`;
+        });
+    }
+    
+    const mediumPriority = diagnosis.suggestions.filter(s => s.priority === 'medium');
+    if (mediumPriority.length > 0) {
+        answer += '\n🟡 中优先级：\n';
+        mediumPriority.slice(0, 3).forEach(s => {
+            answer += `• ${s.title}\n`;
+        });
+    }
+    
+    return answer;
+}
+
+// 生成市场概览回答
+function generateMarketOverviewAnswer(portfolio) {
+    if (!portfolio || portfolio.length === 0) {
+        return '暂无持仓数据，无法分析市场关联。';
+    }
+    
+    const upCount = portfolio.filter(s => (s.year_change || 0) > 0).length;
+    const downCount = portfolio.filter(s => (s.year_change || 0) < 0).length;
+    const avgChange = portfolio.reduce((sum, s) => sum + (s.year_change || 0), 0) / portfolio.length;
+    
+    return `您的持仓市场概览：\n\n` +
+        `上涨股票：${upCount} 只\n` +
+        `下跌股票：${downCount} 只\n` +
+        `平均涨跌：${avgChange >= 0 ? '+' : ''}${avgChange.toFixed(2)}%\n\n` +
+        `整体趋势：${avgChange > 10 ? '强势上涨 📈' : avgChange > 0 ? '温和上涨 📊' : avgChange > -10 ? '震荡调整 ➡️' : '弱势下跌 📉'}`;
+}
+
+// 生成通用回答
+function generateGeneralAnswer(question, contextData) {
+    const { portfolio } = contextData;
+    
+    if (!portfolio || portfolio.length === 0) {
+        return '您好！我是您的 AI 投资助手。您可以问我关于持仓、风险、股票分析等方面的问题。\n\n例如：\n• 我的持仓风险大吗？\n• 分析一下 000001\n• 今天市场怎么样？\n• 有什么投资建议？';
+    }
+    
+    return `您好！我是您的 AI 投资助手。您当前持有 ${portfolio.length} 只股票。\n\n您可以问我：\n• 我的持仓怎么样？\n• 风险大吗？\n• 分析一下某只股票\n• 有什么投资建议？\n\n请问有什么可以帮您的？`;
+}
+
+// 获取表现最好的股票
+function getBestPerformer(portfolio) {
+    const best = portfolio.reduce((best, current) => 
+        (current.year_change || 0) > (best.year_change || 0) ? current : best
+    );
+    return best ? `${best.name} (+${best.year_change?.toFixed(2) || 0}%)` : '无';
+}
+
+// 获取表现最差的股票
+function getWorstPerformer(portfolio) {
+    const worst = portfolio.reduce((worst, current) => 
+        (current.year_change || 0) < (worst.year_change || 0) ? current : worst
+    );
+    return worst ? `${worst.name} (${worst.year_change?.toFixed(2) || 0}%)` : '无';
+}
+
+// 研报解读 API
+app.post('/api/research/analyze', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { content, symbol, source } = req.body;
+        
+        if (!content || content.trim().length === 0) {
+            return res.status(400).json({ error: '请输入研报内容' });
+        }
+        
+        // 使用 AI 分析研报
+        const analysis = await aiService.analyzeResearchReport(content, symbol);
+        
+        // 保存分析结果
+        await saveResearchAnalysis(userId, symbol, source, content, analysis);
+        
+        res.json({
+            success: true,
+            analysis
+        });
+        
+    } catch (error) {
+        console.error('研报分析失败:', error);
+        res.status(500).json({ error: '研报分析失败: ' + error.message });
+    }
+});
+
+// 获取研报历史
+app.get('/api/research/history', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { symbol, limit = 10 } = req.query;
+        
+        let sql = 'SELECT * FROM research_analysis WHERE user_id = ?';
+        const params = [userId];
+        
+        if (symbol) {
+            sql += ' AND symbol = ?';
+            params.push(symbol);
+        }
+        
+        sql += ' ORDER BY created_at DESC LIMIT ?';
+        params.push(parseInt(limit));
+        
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            
+            // 解析 JSON 字段
+            const analyses = rows.map(row => ({
+                ...row,
+                summary: JSON.parse(row.summary || '{}'),
+                key_points: JSON.parse(row.key_points || '[]'),
+                risks: JSON.parse(row.risks || '[]'),
+                outlook: JSON.parse(row.outlook || '{}')
+            }));
+            
+            res.json({ success: true, analyses });
+        });
+        
+    } catch (error) {
+        console.error('获取研报历史失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 保存研报分析
+async function saveResearchAnalysis(userId, symbol, source, content, analysis) {
+    return new Promise((resolve, reject) => {
+        db.run(`INSERT INTO research_analysis 
+            (user_id, symbol, source, content_summary, summary, key_points, risks, outlook, sentiment, rating)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                userId,
+                symbol || null,
+                source || null,
+                content.substring(0, 500),
+                JSON.stringify(analysis.summary || {}),
+                JSON.stringify(analysis.keyPoints || []),
+                JSON.stringify(analysis.risks || []),
+                JSON.stringify(analysis.outlook || {}),
+                analysis.sentiment || 'neutral',
+                analysis.rating || null
+            ],
+            function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            }
+        );
+    });
+}
+
+// 语音/文字交互 API - 智能助手
+app.post('/api/assistant/chat', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { message, type = 'text' } = req.body;
+        
+        if (!message || message.trim().length === 0) {
+            return res.status(400).json({ error: '请输入消息' });
+        }
+        
+        // 获取用户上下文
+        const context = await getAssistantContext(userId);
+        
+        // 处理用户消息
+        const response = await processAssistantMessage(message, context, type);
+        
+        // 保存对话历史
+        await saveChatHistory(userId, message, response.reply);
+        
+        res.json({
+            success: true,
+            reply: response.reply,
+            suggestions: response.suggestions,
+            actions: response.actions,
+            type: response.type
+        });
+        
+    } catch (error) {
+        console.error('助手处理失败:', error);
+        res.status(500).json({ error: '处理失败: ' + error.message });
+    }
+});
+
+// 获取助手上下文
+async function getAssistantContext(userId) {
+    const context = {
+        portfolio: [],
+        recentAlerts: [],
+        lastDiagnosis: null,
+        chatHistory: []
+    };
+    
+    try {
+        // 获取持仓
+        context.portfolio = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM portfolio WHERE user_id = ?', [userId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        // 获取最近提醒
+        context.recentAlerts = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM alerts WHERE user_id = ? ORDER BY created_at DESC LIMIT 5', 
+                [userId], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+        });
+        
+        // 获取最近对话
+        context.chatHistory = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM chat_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+                [userId], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows.reverse());
+                });
+        });
+        
+    } catch (error) {
+        console.error('获取助手上下文失败:', error);
+    }
+    
+    return context;
+}
+
+// 处理助手消息
+async function processAssistantMessage(message, context, type) {
+    const lowerMsg = message.toLowerCase();
+    
+    // 1. 问候和介绍
+    if (/你好|嗨|hi|hello/.test(lowerMsg)) {
+        return {
+            type: 'greeting',
+            reply: generateGreeting(context),
+            suggestions: ['查看持仓', '风险分析', '调仓建议', '市场热点'],
+            actions: []
+        };
+    }
+    
+    // 2. 持仓相关
+    if (/持仓|我的股票|组合|仓位/.test(lowerMsg)) {
+        return generatePortfolioResponse(context);
+    }
+    
+    // 3. 风险相关
+    if (/风险|安全|危险|回撤/.test(lowerMsg)) {
+        return generateRiskResponse(context);
+    }
+    
+    // 4. 分析相关
+    if (/分析|诊断|评估/.test(lowerMsg)) {
+        return {
+            type: 'analysis',
+            reply: '我来为您生成组合诊断报告...',
+            suggestions: ['查看详细报告', '获取调仓建议'],
+            actions: [{ type: 'navigate', target: '/diagnosis', label: '查看诊断报告' }]
+        };
+    }
+    
+    // 5. 调仓建议
+    if (/调仓|建议|买卖|操作/.test(lowerMsg)) {
+        return {
+            type: 'rebalance',
+            reply: '我可以为您提供调仓建议。请告诉我您的风险偏好（稳健/平衡/积极）？',
+            suggestions: ['稳健型', '平衡型', '积极型'],
+            actions: []
+        };
+    }
+    
+    // 6. 市场热点
+    if (/市场|热点|行情|新闻/.test(lowerMsg)) {
+        return generateMarketResponse(context);
+    }
+    
+    // 7. 帮助
+    if (/帮助|help|能做什么|功能/.test(lowerMsg)) {
+        return generateHelpResponse();
+    }
+    
+    // 默认回复
+    return {
+        type: 'general',
+        reply: '抱歉，我没有完全理解您的问题。您可以问我关于持仓、风险分析、调仓建议等方面的问题。',
+        suggestions: ['查看持仓', '风险分析', '调仓建议', '帮助'],
+        actions: []
+    };
+}
+
+// 生成问候语
+function generateGreeting(context) {
+    const hour = new Date().getHours();
+    let timeGreeting = '您好';
+    if (hour < 12) timeGreeting = '早上好';
+    else if (hour < 18) timeGreeting = '下午好';
+    else timeGreeting = '晚上好';
+    
+    if (!context.portfolio || context.portfolio.length === 0) {
+        return `${timeGreeting}！我是您的 AI 投资助手。您还没有添加持仓，可以通过上传截图或手动添加来开始。`;
+    }
+    
+    const totalValue = context.portfolio.reduce((sum, s) => 
+        sum + (s.shares * (s.price || s.avg_cost || 0)), 0
+    );
+    const avgChange = context.portfolio.reduce((sum, s) => sum + (s.year_change || 0), 0) / context.portfolio.length;
+    const trend = avgChange >= 0 ? '📈' : '📉';
+    
+    return `${timeGreeting}！我是您的 AI 投资助手。\n\n您当前持有 ${context.portfolio.length} 只股票，总市值 ${totalValue.toFixed(2)} 元。${trend} 整体年内平均涨跌 ${avgChange.toFixed(2)}%。\n\n有什么可以帮您的吗？`;
+}
+
+// 生成持仓回复
+function generatePortfolioResponse(context) {
+    if (!context.portfolio || context.portfolio.length === 0) {
+        return {
+            type: 'portfolio',
+            reply: '您当前没有持仓。可以通过以下方式添加：\n1. 上传持仓截图\n2. 手动添加股票\n3. 从自选股导入',
+            suggestions: ['上传截图', '手动添加', '查看示例'],
+            actions: [{ type: 'navigate', target: '/upload', label: '上传截图' }]
+        };
+    }
+    
+    const topHoldings = context.portfolio
+        .map(s => ({ name: s.name, change: s.year_change || 0 }))
+        .sort((a, b) => b.change - a.change)
+        .slice(0, 3);
+    
+    const reply = `您当前持有 ${context.portfolio.length} 只股票。\n\n表现前三：\n${topHoldings.map((h, i) => `${i+1}. ${h.name}: ${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%`).join('\n')}\n\n需要查看详细持仓或进行分析吗？`;
+    
+    return {
+        type: 'portfolio',
+        reply,
+        suggestions: ['详细持仓', '组合诊断', '调仓建议', '刷新价格'],
+        actions: [
+            { type: 'navigate', target: '/portfolio', label: '查看详细持仓' },
+            { type: 'navigate', target: '/diagnosis', label: '组合诊断' }
+        ]
+    };
+}
+
+// 生成风险回复
+function generateRiskResponse(context) {
+    if (!context.portfolio || context.portfolio.length === 0) {
+        return {
+            type: 'risk',
+            reply: '暂无持仓数据，无法评估风险。请先添加持仓。',
+            suggestions: ['添加持仓', '上传截图'],
+            actions: []
+        };
+    }
+    
+    const negativeStocks = context.portfolio.filter(s => (s.year_change || 0) < -20);
+    const highConcentration = context.portfolio.length < 5;
+    
+    let riskLevel = 'low';
+    let reply = '您的组合风险可控。';
+    
+    if (negativeStocks.length > 0 || highConcentration) {
+        riskLevel = 'medium';
+        reply = '您的组合存在以下风险点：\n';
+        if (negativeStocks.length > 0) {
+            reply += `• ${negativeStocks.length} 只股票年内跌幅超过20%\n`;
+        }
+        if (highConcentration) {
+            reply += '• 持仓数量较少，分散度不足\n';
+        }
+        reply += '\n建议进行组合诊断以获取详细分析和优化建议。';
+    }
+    
+    return {
+        type: 'risk',
+        reply,
+        suggestions: ['组合诊断', '查看详细分析', '获取优化建议'],
+        actions: [{ type: 'navigate', target: '/diagnosis', label: '组合诊断' }],
+        riskLevel
+    };
+}
+
+// 生成市场回复
+function generateMarketResponse(context) {
+    const upCount = context.portfolio.filter(s => (s.year_change || 0) > 0).length;
+    const downCount = context.portfolio.filter(s => (s.year_change || 0) < 0).length;
+    
+    return {
+        type: 'market',
+        reply: `您的持仓市场概况：\n📈 上涨：${upCount} 只\n📉 下跌：${downCount} 只\n\n可以通过"新闻监控"功能获取持仓相关最新资讯。`,
+        suggestions: ['新闻监控', '行业分析', '持仓对比'],
+        actions: [{ type: 'navigate', target: '/news', label: '新闻监控' }]
+    };
+}
+
+// 生成帮助回复
+function generateHelpResponse() {
+    return {
+        type: 'help',
+        reply: `我可以帮您：
+
+📊 **持仓管理**
+• 查看持仓明细
+• 上传截图识别
+• 刷新实时价格
+
+🔍 **投资分析**
+• 组合诊断报告
+• 风险评估
+• 调仓建议
+
+📰 **资讯服务**
+• 新闻监控
+• 研报解读
+• 市场热点
+
+💬 **随时提问**
+• "我的持仓怎么样？"
+• "风险大吗？"
+• "有什么建议？"`,
+        suggestions: ['查看持仓', '组合诊断', '调仓建议', '新闻监控'],
+        actions: []
+    };
+}
+
+// 保存对话历史
+async function saveChatHistory(userId, message, reply) {
+    return new Promise((resolve, reject) => {
+        db.run(`INSERT INTO chat_history (user_id, message, reply) VALUES (?, ?, ?)`,
+            [userId, message, reply],
+            function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            }
+        );
+    });
+}
 
 // 获取监控列表（支持多用户）
 app.get('/api/monitoring', authenticateToken, (req, res) => {

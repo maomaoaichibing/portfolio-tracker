@@ -304,7 +304,123 @@ ${JSON.stringify(currentNews, null, 2)}
     }
 }
 
-// ============ 模拟数据生成（用于测试） ============
+/**
+ * 分析研报
+ * @param {string} content - 研报内容
+ * @param {string} symbol - 股票代码（可选）
+ * @returns {Promise<Object>} 研报分析结果
+ */
+async function analyzeResearchReport(content, symbol) {
+    if (MOCK_MODE) {
+        console.log('[模拟模式] 研报分析');
+        return generateMockResearchAnalysis(symbol);
+    }
+    
+    const prompt = `请分析以下研报内容，提取关键信息并以JSON格式返回：
+
+研报内容：
+${content.substring(0, 3000)}
+
+请提取以下信息并以JSON格式返回：
+{
+    "summary": {
+        "title": "研报标题或主题",
+        "issuer": "发布机构",
+        "date": "发布日期",
+        "mainConclusion": "主要结论"
+    },
+    "keyPoints": [
+        {"point": "要点1", "importance": "high/medium/low"},
+        {"point": "要点2", "importance": "high/medium/low"}
+    ],
+    "risks": [
+        "风险1",
+        "风险2"
+    ],
+    "outlook": {
+        "shortTerm": "短期展望",
+        "mediumTerm": "中期展望",
+        "catalysts": ["催化剂1", "催化剂2"]
+    },
+    "sentiment": "positive/negative/neutral",
+    "rating": "买入/增持/中性/减持/卖出"
+}
+
+注意：如果内容不是研报，请基于内容给出合理的分析框架。`;
+
+    try {
+        const response = await axios.post(KIMI_API_URL, {
+            model: 'moonshot-v1-8k',
+            messages: [
+                { role: 'system', content: '你是一个专业的金融研报分析师，擅长提取研报关键信息。' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.3
+        }, {
+            headers: {
+                'Authorization': `Bearer ${KIMI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 60000
+        });
+        
+        const result = response.data.choices[0].message.content;
+        // 提取 JSON
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        
+        return parseResearchAnalysisFallback(result);
+    } catch (error) {
+        console.error('研报分析失败:', error.message);
+        return generateMockResearchAnalysis(symbol);
+    }
+}
+
+// 研报分析失败时的备用解析
+function parseResearchAnalysisFallback(text) {
+    return {
+        summary: {
+            title: '研报分析',
+            mainConclusion: text.substring(0, 200) + '...'
+        },
+        keyPoints: [{ point: '请查看原始内容', importance: 'medium' }],
+        risks: ['请人工复核'],
+        outlook: { shortTerm: '请查看原始研报' },
+        sentiment: 'neutral',
+        rating: null
+    };
+}
+
+// 模拟研报分析
+function generateMockResearchAnalysis(symbol) {
+    return {
+        summary: {
+            title: symbol ? `${symbol} 研究报告` : '市场研究报告',
+            issuer: '模拟券商',
+            date: new Date().toISOString().split('T')[0],
+            mainConclusion: '公司基本面稳健，行业前景向好，建议关注。'
+        },
+        keyPoints: [
+            { point: '业绩稳健增长，营收超预期', importance: 'high' },
+            { point: '行业政策利好，市场空间扩大', importance: 'high' },
+            { point: '竞争格局优化，龙头地位稳固', importance: 'medium' }
+        ],
+        risks: [
+            '宏观经济波动风险',
+            '行业监管政策变化',
+            '原材料价格波动'
+        ],
+        outlook: {
+            shortTerm: '震荡向上',
+            mediumTerm: '稳健增长',
+            catalysts: ['业绩发布', '行业政策', '新产品推出']
+        },
+        sentiment: 'positive',
+        rating: '增持'
+    };
+}
 
 function generateMockStockLogic(symbol, name) {
     const isPositive = Math.random() > 0.5;
@@ -377,5 +493,6 @@ module.exports = {
     analyzePortfolio,
     analyzeStockLogic,
     detectLogicChange,
+    analyzeResearchReport,
     MOCK_MODE
 };
