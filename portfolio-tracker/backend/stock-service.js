@@ -224,9 +224,55 @@ async function updatePortfolioPrices(db) {
     });
 }
 
+/**
+ * 获取股票历史价格数据
+ * @param {string} symbol - 股票代码
+ * @param {number} days - 获取天数
+ * @returns {Promise<Array>} 历史价格数组
+ */
+async function getStockHistory(symbol, days = 30) {
+    // 返回模拟数据（实际项目中应该调用真实的 API）
+    return generateMockHistory(symbol, days);
+}
+
+/**
+ * 生成模拟历史数据
+ */
+function generateMockHistory(symbol, days) {
+    const history = [];
+    const basePrice = 100 + Math.random() * 100;
+    let currentPrice = basePrice;
+    
+    const now = new Date();
+    for (let i = days; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        
+        // 随机波动
+        const change = (Math.random() - 0.5) * 0.05;
+        currentPrice = currentPrice * (1 + change);
+        
+        const dayHigh = currentPrice * (1 + Math.random() * 0.02);
+        const dayLow = currentPrice * (1 - Math.random() * 0.02);
+        const dayOpen = dayLow + Math.random() * (dayHigh - dayLow);
+        
+        history.push({
+            date: date.toISOString().split('T')[0],
+            open: parseFloat(dayOpen.toFixed(2)),
+            high: parseFloat(dayHigh.toFixed(2)),
+            low: parseFloat(dayLow.toFixed(2)),
+            close: parseFloat(currentPrice.toFixed(2)),
+            volume: Math.floor(Math.random() * 1000000)
+        });
+    }
+    
+    return history;
+}
+
 module.exports = {
     getStockPrice,
     getBatchStockPrices,
     updatePortfolioPrices,
+    getStockHistory,
     convertToSinaCode
 };
