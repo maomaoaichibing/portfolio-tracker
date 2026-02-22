@@ -86,6 +86,21 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    /* 历史价格数据表 */
+    db.run(`CREATE TABLE IF NOT EXISTS price_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        date TEXT NOT NULL,
+        open REAL,
+        high REAL,
+        low REAL,
+        close REAL,
+        volume INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(symbol, date)
+    )`);
+
+    /* 新闻表 */
     db.run(`CREATE TABLE IF NOT EXISTS news (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT NOT NULL,
@@ -100,6 +115,11 @@ db.serialize(() => {
         is_important INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    /* 创建索引 */
+    db.run(`CREATE INDEX IF NOT EXISTS idx_price_history_symbol ON price_history(symbol)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_price_history_date ON price_history(date)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_news_symbol ON news(symbol)`);
 });
 
 // ============ API 路由 ============
@@ -224,6 +244,39 @@ app.get('/api/stock/price/:symbol', async (req, res) => {
     } catch (error) {
         console.error('获取股价失败:', error);
         res.status(500).json({ error: '获取股价失败: ' + error.message });
+    }
+});
+
+// 获取股票历史价格
+app.get('/api/stock/history/:symbol', async (req, res) => {
+    try {
+        const { symbol } = req.params;
+        const days = parseInt(req.query.days) || 30;
+        
+        // 首先尝试从数据库获取
+        let history = await getPriceHistoryFromDB(symbol, days);
+        
+        // 如果数据库中没有足够的数据，从 API 获取并保存
+        if (history.length < days * 0.8) {
+            console.log(`[历史价格] 数据库中 ${symbol} 数据不足，从 API 获取...`);
+            const apiHistory = await stockService.getStockHistory(symbol, days);
+            
+            if (apiHistory && apiHistory.length > 0) {
+                // 保存到数据库
+                savePriceHistory(symbol, apiHistory);
+                history = apiHistory;
+            }
+        }
+        
+        res.json({
+            success: true,
+            symbol,
+            days: history.length,
+            data: history
+        });
+    } catch (error) {
+        console.error('获取历史价格失败:', error);
+        res.status(500).json({ error: '获取历史价格失败: ' + error.message });
     }
 });
 
@@ -430,6 +483,59 @@ function saveAlert(alert) {
             if (err) console.error('保存提醒失败:', err.message);
         }
     );
+}
+
+/**
+ * 保存历史价格数据
+ * @param {string} symbol - 股票代码
+ * @param {Array} historyData - 历史价格数组
+ */
+function savePriceHistory(symbol, historyData) {
+    if (!historyData || historyData.length === 0) return;
+    
+    const stmt = db.prepare(`INSERT OR REPLACE INTO price_history 
+        (symbol, date, open, high, low, close, volume)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    
+    historyData.forEach(item => {
+        stmt.run([
+            symbol,
+            item.date,
+            item.open,
+            item.high,
+            item.low,
+            item.close,
+            item.volume
+        ]);
+    });
+    
+    stmt.finalize();
+    console.log(`[价格历史] 已保存 ${symbol} 的 ${historyData.length} 条记录`);
+}
+
+/**
+ * 从数据库获取历史价格
+ * @param {string} symbol - 股票代码
+ * @param {number} days - 天数
+ * @returns {Promise<Array>} 历史价格数组
+ */
+function getPriceHistoryFromDB(symbol, days) {
+    return new Promise((resolve, reject) => {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        const cutoffStr = cutoffDate.toISOString().split('T')[0];
+        
+        db.all(
+            `SELECT * FROM price_history 
+             WHERE symbol = ? AND date >= ? 
+             ORDER BY date ASC`,
+            [symbol, cutoffStr],
+            (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            }
+        );
+    });
 }
 
 // ============ 监控提醒 API ============
