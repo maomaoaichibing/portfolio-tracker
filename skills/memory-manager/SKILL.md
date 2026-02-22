@@ -15,10 +15,34 @@ Use this skill when:
 - User asks about prior decisions, tasks, or context
 - Memory maintenance is needed (archiving, consolidation, cleanup)
 - You need to list or browse memory files
+- **You complete a task, make a decision, or add a feature - record it immediately!**
 
 ## Core Capabilities
 
-### 1. Search Memories
+### 1. Real-time Memory Recording ⭐ NEW
+
+**Record important events immediately as they happen:**
+
+```bash
+# Record task completion
+python3 scripts/realtime_memory.py record-task "完成API开发" "实现了用户认证接口"
+
+# Record important decision
+python3 scripts/realtime_memory.py record-decision "使用SQLite而不是MySQL" "部署更简单，适合个人使用"
+
+# Record new feature
+python3 scripts/realtime_memory.py record-feature "组合诊断报告" "包含风险评分、集中度分析、优化建议"
+
+# View recent memories
+python3 scripts/realtime_memory.py recent
+```
+
+**Why real-time recording matters:**
+- Prevents memory loss between sessions
+- Builds context for future conversations
+- Creates searchable history of work
+
+### 2. Search Memories
 
 Search through all memory files using keyword matching with context awareness:
 
