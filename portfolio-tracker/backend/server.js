@@ -149,16 +149,23 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 上传持仓截图并识别
-app.post('/api/portfolio/upload', upload.array('screenshots', 5), async (req, res) => {
+// 上传持仓截图并识别（支持多用户）
+app.post('/api/portfolio/upload', authenticateToken, upload.array('screenshots', 5), async (req, res) => {
     try {
+        const userId = req.userId;
         const files = req.files;
+        
         if (!files || files.length === 0) {
             return res.status(400).json({ error: '没有上传文件' });
         }
 
         // 使用第一张图片进行识别
         const portfolio = await aiService.recognizePortfolio(files[0].buffer);
+        
+        // 保存到数据库（关联用户）
+        if (portfolio && portfolio.length > 0) {
+            savePortfolio(portfolio, userId);
+        }
 
         res.json({
             success: true,
@@ -172,9 +179,10 @@ app.post('/api/portfolio/upload', upload.array('screenshots', 5), async (req, re
     }
 });
 
-// AI 分析持仓
-app.post('/api/portfolio/analyze', async (req, res) => {
+// AI 分析持仓（支持多用户）
+app.post('/api/portfolio/analyze', authenticateToken, async (req, res) => {
     try {
+        const userId = req.userId;
         const { portfolio } = req.body;
         
         if (!portfolio || portfolio.length === 0) {
@@ -194,8 +202,8 @@ app.post('/api/portfolio/analyze', async (req, res) => {
                     ...logicAnalysis
                 });
                 
-                // 保存到数据库
-                saveStockAnalysis(stock.symbol, logicAnalysis);
+                // 保存到数据库（关联用户）
+                saveStockAnalysis(stock.symbol, logicAnalysis, userId);
             } catch (err) {
                 console.error(`分析 ${stock.symbol} 失败:`, err.message);
             }
@@ -204,9 +212,9 @@ app.post('/api/portfolio/analyze', async (req, res) => {
         // 生成监控指标
         const monitoring = generateMonitoringMetrics(stockAnalyses);
 
-        // 保存持仓
-        savePortfolio(portfolio);
-        saveMonitoringMetrics(monitoring);
+        // 保存持仓（关联用户）
+        savePortfolio(portfolio, userId);
+        saveMonitoringMetrics(monitoring, userId);
 
         res.json({
             success: true,
@@ -359,9 +367,11 @@ app.get('/api/portfolio/comparison', authenticateToken, async (req, res) => {
 });
 });
 
-// 获取监控列表
-app.get('/api/monitoring', (req, res) => {
-    db.all('SELECT * FROM monitoring WHERE status = ?', ['active'], (err, rows) => {
+// 获取监控列表（支持多用户）
+app.get('/api/monitoring', authenticateToken, (req, res) => {
+    const userId = req.userId;
+    
+    db.all('SELECT * FROM monitoring WHERE status = ? AND user_id = ?', ['active', userId], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
@@ -369,14 +379,16 @@ app.get('/api/monitoring', (req, res) => {
     });
 });
 
-// 获取提醒列表
-app.get('/api/alerts', (req, res) => {
+// 获取提醒列表（支持多用户）
+app.get('/api/alerts', authenticateToken, (req, res) => {
+    const userId = req.userId;
     const { unreadOnly } = req.query;
-    let sql = 'SELECT * FROM alerts';
-    const params = [];
+    
+    let sql = 'SELECT * FROM alerts WHERE user_id = ?';
+    const params = [userId];
     
     if (unreadOnly === 'true') {
-        sql += ' WHERE is_read = 0';
+        sql += ' AND is_read = 0';
     }
     sql += ' ORDER BY created_at DESC';
 
@@ -388,35 +400,41 @@ app.get('/api/alerts', (req, res) => {
     });
 });
 
-// 获取标的分析详情
-app.get('/api/analysis/:symbol', (req, res) => {
+// 获取标的分析详情（支持多用户）
+app.get('/api/analysis/:symbol', authenticateToken, (req, res) => {
+    const userId = req.userId;
     const { symbol } = req.params;
     
-    db.get('SELECT * FROM analysis WHERE symbol = ? ORDER BY created_at DESC LIMIT 1', [symbol], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
+    db.get('SELECT * FROM analysis WHERE symbol = ? AND user_id = ? ORDER BY created_at DESC LIMIT 1', 
+        [symbol, userId], 
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (!row) {
+                return res.status(404).json({ error: '未找到分析记录' });
+            }
+            
+            // 解析 JSON 字段
+            const analysis = {
+                ...row,
+                key_drivers: JSON.parse(row.key_drivers || '[]'),
+                risk_factors: JSON.parse(row.risk_factors || '[]'),
+                monitoring_checklist: JSON.parse(row.monitoring_checklist || '[]')
+            };
+            
+            res.json({ analysis });
         }
-        if (!row) {
-            return res.status(404).json({ error: '未找到分析记录' });
-        }
-        
-        // 解析 JSON 字段
-        const analysis = {
-            ...row,
-            key_drivers: JSON.parse(row.key_drivers || '[]'),
-            risk_factors: JSON.parse(row.risk_factors || '[]'),
-            monitoring_checklist: JSON.parse(row.monitoring_checklist || '[]')
-        };
-        
-        res.json({ analysis });
-    });
+    );
 });
 
-// 手动刷新监控数据
-app.post('/api/monitoring/refresh', async (req, res) => {
+// 手动刷新监控数据（支持多用户）
+app.post('/api/monitoring/refresh', authenticateToken, async (req, res) => {
     try {
-        // 获取所有持仓
-        db.all('SELECT * FROM portfolio', [], async (err, stocks) => {
+        const userId = req.userId;
+        
+        // 获取用户的持仓
+        db.all('SELECT * FROM portfolio WHERE user_id = ?', [userId], async (err, stocks) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
             }
@@ -441,13 +459,13 @@ app.post('/api/monitoring/refresh', async (req, res) => {
                                         title: `${stock.name} 涨跌幅发生重大变化`,
                                         content: `年内涨跌幅从 ${oldAnalysis.year_change}% 变为 ${newAnalysis.year_change}%`
                                     };
-                                    saveAlert(alert);
+                                    saveAlert(alert, userId);
                                     newAlerts.push(alert);
                                 }
                             }
                             
                             // 保存新分析
-                            saveStockAnalysis(stock.symbol, newAnalysis);
+                            saveStockAnalysis(stock.symbol, newAnalysis, userId);
                         });
                 } catch (err) {
                     console.error(`刷新 ${stock.symbol} 失败:`, err.message);
@@ -503,16 +521,17 @@ function savePortfolio(portfolio, userId = 1) {
     });
 }
 
-function saveStockAnalysis(symbol, analysis) {
-    db.run(`INSERT INTO analysis (symbol, year_change, trend_summary, key_drivers, risk_factors, monitoring_checklist)
-            VALUES (?, ?, ?, ?, ?, ?)`,
+function saveStockAnalysis(symbol, analysis, userId = 1) {
+    db.run(`INSERT INTO analysis (symbol, year_change, trend_summary, key_drivers, risk_factors, monitoring_checklist, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
             symbol,
             analysis.year_change,
             analysis.trend_summary,
             JSON.stringify(analysis.key_drivers || []),
             JSON.stringify(analysis.risk_factors || []),
-            JSON.stringify(analysis.monitoring_checklist || [])
+            JSON.stringify(analysis.monitoring_checklist || []),
+            userId
         ],
         (err) => {
             if (err) console.error('保存分析失败:', err.message);
@@ -520,10 +539,10 @@ function saveStockAnalysis(symbol, analysis) {
     );
 }
 
-function saveMonitoringMetrics(metrics) {
+function saveMonitoringMetrics(metrics, userId = 1) {
     metrics.forEach(m => {
-        db.get('SELECT id FROM monitoring WHERE symbol = ? AND metric_name = ?', 
-            [m.symbol, m.metric], 
+        db.get('SELECT id FROM monitoring WHERE symbol = ? AND metric_name = ? AND user_id = ?', 
+            [m.symbol, m.metric, userId], 
             (err, row) => {
                 if (err) {
                     console.error('查询监控指标失败:', err.message);
@@ -541,9 +560,9 @@ function saveMonitoringMetrics(metrics) {
                         }
                     );
                 } else {
-                    db.run(`INSERT INTO monitoring (symbol, metric_name, metric_type, description, threshold_value)
-                        VALUES (?, ?, ?, ?, ?)`,
-                        [m.symbol, m.metric, m.type, m.description, m.threshold],
+                    db.run(`INSERT INTO monitoring (symbol, metric_name, metric_type, description, threshold_value, user_id)
+                        VALUES (?, ?, ?, ?, ?, ?)`,
+                        [m.symbol, m.metric, m.type, m.description, m.threshold, userId],
                         (err) => {
                             if (err) console.error('插入监控指标失败:', err.message);
                         }
@@ -554,10 +573,10 @@ function saveMonitoringMetrics(metrics) {
     });
 }
 
-function saveAlert(alert) {
-    db.run(`INSERT INTO alerts (symbol, alert_type, priority, title, content)
-            VALUES (?, ?, ?, ?, ?)`,
-        [alert.symbol, alert.alert_type, alert.priority, alert.title, alert.content],
+function saveAlert(alert, userId = 1) {
+    db.run(`INSERT INTO alerts (symbol, alert_type, priority, title, content, user_id)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+        [alert.symbol, alert.alert_type, alert.priority, alert.title, alert.content, userId],
         (err) => {
             if (err) console.error('保存提醒失败:', err.message);
         }
