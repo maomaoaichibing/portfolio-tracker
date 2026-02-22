@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-xl font-bold mb-4">上传功能测试</h1>
+        
+        <button onclick="showTestModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            打开上传模态框
+        </button>
+        
+        <div id="testModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+                <h3 class="text-lg font-semibold mb-4">测试上传</h3>
+                
+                <div id="testDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
+                    <input type="file" id="testFileInput" class="hidden" accept="image/*">
+                    <p class="text-gray-600">点击选择文件</p>
+                </div>
+                
+                <div id="testPreview" class="hidden mt-4 p-4 bg-gray-50 rounded">
+                    <p class="text-sm text-gray-700">已选择: <span id="testFileName"></span></p>
+                </div>
+                
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button onclick="hideTestModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
+                    <button onclick="testUpload()" id="testUploadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50" disabled>上传</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="testLog" class="mt-4 p-4 bg-gray-100 rounded text-sm font-mono h-40 overflow-y-auto"></div>
+    </div>
+
+    <script>
+        function log(msg) {
+            console.log(msg);
+            document.getElementById('testLog').innerHTML += msg + '<br>';
+        }
+        
+        function showTestModal() {
+            log('showTestModal called');
+            const modal = document.getElementById('testModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            initTestEvents();
+        }
+        
+        function hideTestModal() {
+            log('hideTestModal called');
+            const modal = document.getElementById('testModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        function initTestEvents() {
+            log('initTestEvents called');
+            
+            const dropZone = document.getElementById('testDropZone');
+            const fileInput = document.getElementById('testFileInput');
+            
+            if (!dropZone || !fileInput) {
+                log('ERROR: Elements not found');
+                return;
+            }
+            
+            // 移除旧的事件监听器
+            const newDropZone = dropZone.cloneNode(true);
+            dropZone.parentNode.replaceChild(newDropZone, dropZone);
+            
+            const newFileInput = fileInput.cloneNode(true);
+            fileInput.parentNode.replaceChild(newFileInput, fileInput);
+            
+            // 重新获取引用
+            const dz = document.getElementById('testDropZone');
+            const fi = document.getElementById('testFileInput');
+            
+            dz.addEventListener('click', (e) => {
+                log('dropZone clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                fi.click();
+            });
+            
+            fi.addEventListener('change', (e) => {
+                log('file selected: ' + (e.target.files[0]?.name || 'none'));
+                if (e.target.files.length > 0) {
+                    document.getElementById('testFileName').textContent = e.target.files[0].name;
+                    document.getElementById('testPreview').classList.remove('hidden');
+                    document.getElementById('testUploadBtn').disabled = false;
+                }
+            });
+            
+            log('Events bound successfully');
+        }
+        
+        function testUpload() {
+            log('testUpload called');
+            const fileInput = document.getElementById('testFileInput');
+            if (fileInput.files.length === 0) {
+                log('ERROR: No file selected');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('screenshots', fileInput.files[0]);
+            
+            log('Uploading...');
+            
+            fetch('/api/portfolio/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                log('Upload success: ' + JSON.stringify(data).substring(0, 100));
+            })
+            .catch(err => {
+                log('Upload error: ' + err.message);
+            });
+        }
+    </script>
+</body>
+</html>

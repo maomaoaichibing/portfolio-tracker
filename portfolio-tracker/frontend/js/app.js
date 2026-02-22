@@ -21,14 +21,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 初始化事件监听
 function initEventListeners() {
+    console.log('[DEBUG] Initializing event listeners');
+    
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
+    
+    if (!dropZone) {
+        console.error('[DEBUG] dropZone not found!');
+        return;
+    }
+    if (!fileInput) {
+        console.error('[DEBUG] fileInput not found!');
+        return;
+    }
+    
+    console.log('[DEBUG] Found dropZone and fileInput');
 
-    // 点击上传
-    dropZone.addEventListener('click', () => fileInput.click());
+    // 点击上传 - 使用更可靠的方式
+    dropZone.addEventListener('click', (e) => {
+        console.log('[DEBUG] dropZone clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
 
     // 文件选择
-    fileInput.addEventListener('change', handleFileSelect);
+    fileInput.addEventListener('change', (e) => {
+        console.log('[DEBUG] File selected:', e.target.files);
+        handleFileSelect(e);
+    });
 
     // 拖拽事件
     dropZone.addEventListener('dragover', (e) => {
@@ -44,8 +65,11 @@ function initEventListeners() {
         e.preventDefault();
         dropZone.classList.remove('drop-zone-active');
         const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        console.log('[DEBUG] Files dropped:', files);
         handleFiles(files);
     });
+    
+    console.log('[DEBUG] Event listeners initialized');
 }
 
 // 处理文件选择
@@ -99,9 +123,19 @@ function removeFile(index) {
 
 // 显示上传模态框
 function showUploadModal() {
-    document.getElementById('uploadModal').classList.remove('hidden');
-    document.getElementById('uploadModal').classList.add('flex');
+    console.log('[DEBUG] showUploadModal called');
+    const modal = document.getElementById('uploadModal');
+    if (!modal) {
+        console.error('[DEBUG] uploadModal not found!');
+        return;
+    }
+    console.log('[DEBUG] Found uploadModal, showing...');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     resetUploadForm();
+    
+    // 重新初始化事件监听，确保元素存在
+    setTimeout(initEventListeners, 100);
 }
 
 // 隐藏上传模态框

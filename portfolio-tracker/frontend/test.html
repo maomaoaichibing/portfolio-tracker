@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API连接测试</h1>
+    <div id="status">测试中...</div>
+    <pre id="result"></pre>
+
+    <script>
+        const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
+        
+        async function testAPI() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                console.log('Testing API:', API_BASE_URL + '/portfolio');
+                const response = await fetch(API_BASE_URL + '/portfolio');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                statusDiv.innerHTML = '<span style="color: green">✅ API连接成功</span>';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('API Error:', error);
+                statusDiv.innerHTML = '<span style="color: red">❌ API连接失败</span>';
+                resultDiv.textContent = '错误: ' + error.message;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>
