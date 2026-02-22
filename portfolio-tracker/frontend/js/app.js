@@ -5,6 +5,9 @@
 // API 基础 URL - 自动检测当前环境
 const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
 
+console.log('[DEBUG] API_BASE_URL:', API_BASE_URL);
+console.log('[DEBUG] window.location:', window.location.href);
+
 // 全局状态
 let selectedFiles = [];
 let portfolioData = [];
@@ -62,7 +65,7 @@ function handleFiles(files) {
 function updatePreview() {
     const previewArea = document.getElementById('previewArea');
     const previewList = document.getElementById('previewList');
-    
+
     if (selectedFiles.length === 0) {
         previewArea.classList.add('hidden');
         return;
@@ -161,7 +164,7 @@ async function uploadFiles() {
         // 识别成功后，调用分析接口
         if (result.portfolio && result.portfolio.length > 0) {
             uploadStatus.textContent = '正在生成分析报告...';
-            
+
             const analyzeResponse = await fetch(`${API_BASE_URL}/portfolio/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -169,7 +172,7 @@ async function uploadFiles() {
             });
 
             const analyzeResult = await analyzeResponse.json();
-            
+
             if (analyzeResult.success) {
                 console.log('分析结果:', analyzeResult);
             }
@@ -195,9 +198,17 @@ async function uploadFiles() {
 // 加载持仓数据
 async function loadPortfolio() {
     try {
+        console.log('[DEBUG] Loading portfolio from:', `${API_BASE_URL}/portfolio`);
         const response = await fetch(`${API_BASE_URL}/portfolio`);
-        const data = await response.json();
+        console.log('[DEBUG] Response status:', response.status);
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[DEBUG] Portfolio data:', data);
+
         if (data.portfolio) {
             // 转换后端数据格式到前端格式
             portfolioData = data.portfolio.map(item => ({
@@ -217,11 +228,12 @@ async function loadPortfolio() {
             portfolioData = [];
         }
         
+        console.log('[DEBUG] Processed portfolioData:', portfolioData);
         updateStats();
         renderPortfolioTable();
     } catch (error) {
-        console.error('加载持仓失败:', error);
-        showToast('加载持仓数据失败，请检查服务是否启动', 'error');
+        console.error('[DEBUG] 加载持仓失败:', error);
+        showToast('加载持仓数据失败: ' + error.message, 'error');
         // 失败时显示空状态
         portfolioData = [];
         updateStats();
@@ -238,11 +250,11 @@ function updateStats() {
 
     document.getElementById('totalHoldings').textContent = totalHoldings;
     document.getElementById('totalValue').textContent = formatCurrency(totalValue);
-    
+
     const pnlElement = document.getElementById('todayPnL');
     pnlElement.textContent = formatCurrency(todayPnL);
     pnlElement.className = `text-2xl font-bold ${todayPnL >= 0 ? 'profit' : 'loss'}`;
-    
+
     document.getElementById('monitoringCount').textContent = monitoringCount;
 }
 
@@ -319,14 +331,14 @@ function renderPortfolioTable() {
 // 刷新持仓
 async function refreshPortfolio() {
     showToast('正在刷新价格...');
-    
+
     try {
         // 先刷新后端价格
         const response = await fetch(`${API_BASE_URL}/portfolio/refresh-prices`, {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(result.message);
             // 然后重新加载持仓数据
@@ -378,7 +390,7 @@ function showDetail(id) {
                     <p class="text-2xl font-bold text-gray-900">${formatCurrency(item.marketValue)}</p>
                 </div>
             </div>
-            
+
             <!-- 盈亏信息 -->
             <div class="border-t pt-4">
                 <h4 class="font-semibold text-gray-900 mb-3">盈亏情况</h4>
@@ -387,7 +399,7 @@ function showDetail(id) {
                     <span class="text-xl font-bold ${item.pnl >= 0 ? 'profit' : 'loss'}">${item.pnl >= 0 ? '+' : ''}${formatCurrency(item.pnl)} (${item.pnl >= 0 ? '+' : ''}${item.pnlPercent.toFixed(2)}%)</span>
                 </div>
             </div>
-            
+
             <!-- 监控指标 -->
             <div class="border-t pt-4">
                 <h4 class="font-semibold text-gray-900 mb-3">监控指标</h4>
@@ -406,7 +418,7 @@ function showDetail(id) {
                     </div>
                 </div>
             </div>
-            
+
             <!-- 近期动态 -->
             <div class="border-t pt-4">
                 <h4 class="font-semibold text-gray-900 mb-3">近期动态</h4>
@@ -429,7 +441,7 @@ function showDetail(id) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('detailModal').classList.remove('hidden');
     document.getElementById('detailModal').classList.add('flex');
 }
@@ -451,7 +463,7 @@ function analyzeStock(id) {
             <span class="text-gray-600">AI 正在分析持仓...</span>
         </div>
     `;
-    
+
     document.getElementById('analysisModal').classList.remove('hidden');
     document.getElementById('analysisModal').classList.add('flex');
 
@@ -467,7 +479,7 @@ function analyzeStock(id) {
                         <li>机构持仓比例较高，市场认可度高</li>
                     </ul>
                 </div>
-                
+
                 <div class="bg-yellow-50 p-4 rounded-lg">
                     <h4 class="font-semibold text-yellow-900 mb-2">风险提示</h4>
                     <ul class="list-disc list-inside text-sm text-yellow-800 space-y-1">
@@ -476,7 +488,7 @@ function analyzeStock(id) {
                         <li>当前估值处于历史中高位，需关注业绩兑现</li>
                     </ul>
                 </div>
-                
+
                 <div class="bg-gray-50 p-4 rounded-lg">
                     <h4 class="font-semibold text-gray-900 mb-2">监控建议</h4>
                     <div class="space-y-2">
@@ -494,7 +506,7 @@ function analyzeStock(id) {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="border-t pt-4">
                     <h4 class="font-semibold text-gray-900 mb-2">涨跌逻辑分析</h4>
                     <p class="text-sm text-gray-600 leading-relaxed">
@@ -532,7 +544,7 @@ async function loadAlerts() {
     try {
         const response = await fetch(`${API_BASE_URL}/alerts?unreadOnly=true`);
         const data = await response.json();
-        
+
         if (data.alerts && data.alerts.length > 0) {
             container.innerHTML = data.alerts.slice(0, 5).map(alert => `
                 <div class="flex items-start space-x-3 p-3 bg-${alert.priority === 'high' ? 'red' : alert.priority === 'medium' ? 'yellow' : 'blue'}-50 rounded-lg mb-2">
@@ -587,13 +599,13 @@ async function markAlertRead(id) {
 // 手动检查监控
 async function checkMonitoring() {
     showToast('正在检查监控指标...');
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/monitoring/check`, {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(`检查完成，触发 ${result.alertsTriggered} 条提醒`);
             loadAlerts();
@@ -609,13 +621,13 @@ async function checkMonitoring() {
 // 发送每日报告到飞书
 async function sendDailyReport() {
     showToast('正在生成并发送日报...');
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/feishu/daily-report`, {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast('日报已发送到飞书');
         } else {
@@ -633,18 +645,18 @@ async function sendDailyReport() {
 function showPriceAlertModal() {
     document.getElementById('priceAlertModal').classList.remove('hidden');
     document.getElementById('priceAlertModal').classList.add('flex');
-    
+
     // 填充股票选择下拉框
     const select = document.getElementById('alertSymbol');
     select.innerHTML = '<option value="">选择股票</option>';
-    
+
     portfolioData.forEach(stock => {
         const option = document.createElement('option');
         option.value = stock.code;
         option.textContent = `${stock.name} (${stock.code})`;
         select.appendChild(option);
     });
-    
+
     // 监听选择变化，显示当前价格
     select.addEventListener('change', async (e) => {
         const symbol = e.target.value;
@@ -675,21 +687,21 @@ async function createPriceAlert() {
     const symbol = document.getElementById('alertSymbol').value;
     const alertType = document.getElementById('alertType').value;
     const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
-    
+
     if (!symbol || !targetPrice || targetPrice <= 0) {
         showToast('请填写完整信息', 'error');
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/price-alerts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbol, alertType, targetPrice })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(result.message);
             hidePriceAlertModal();
@@ -708,11 +720,11 @@ async function loadPriceAlerts() {
     try {
         const response = await fetch(`${API_BASE_URL}/price-alerts`);
         const data = await response.json();
-        
+
         // 更新提醒面板显示价格预警
         const container = document.getElementById('alertsContainer');
         if (!container) return;
-        
+
         if (data.alerts && data.alerts.length > 0) {
             const alertHtml = data.alerts.map(alert => `
                 <div class="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg mb-2">
@@ -734,7 +746,7 @@ async function loadPriceAlerts() {
                     </button>
                 </div>
             `).join('');
-            
+
             // 如果已有内容，追加到前面
             const existing = container.innerHTML;
             if (existing.includes('暂无未读提醒')) {
@@ -751,14 +763,14 @@ async function loadPriceAlerts() {
 // 删除价格预警
 async function deletePriceAlert(id) {
     if (!confirm('确定要删除这个预警吗？')) return;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/price-alerts/${id}`, {
             method: 'DELETE'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showToast('预警已删除');
             loadPriceAlerts();
@@ -795,19 +807,19 @@ async function loadAllNews() {
             <span class="text-gray-600">加载新闻...</span>
         </div>
     `;
-    
+
     try {
         // 获取重要新闻
         const response = await fetch(`${API_BASE_URL}/news?importantOnly=true&limit=50`);
         const data = await response.json();
-        
+
         if (data.news && data.news.length > 0) {
             renderNewsList(data.news);
         } else {
             // 如果没有重要新闻，获取所有新闻
             const allResponse = await fetch(`${API_BASE_URL}/news?limit=30`);
             const allData = await allResponse.json();
-            
+
             if (allData.news && allData.news.length > 0) {
                 renderNewsList(allData.news);
             } else {
@@ -836,7 +848,7 @@ async function loadAllNews() {
 // 渲染新闻列表
 function renderNewsList(news) {
     const container = document.getElementById('newsContent');
-    
+
     // 按股票分组
     const groupedNews = {};
     news.forEach(item => {
@@ -845,9 +857,9 @@ function renderNewsList(news) {
         }
         groupedNews[item.symbol].push(item);
     });
-    
+
     let html = '';
-    
+
     // 重要新闻标题
     const importantCount = news.filter(n => n.is_important).length;
     html += `
@@ -866,12 +878,12 @@ function renderNewsList(news) {
             ` : ''}
         </div>
     `;
-    
+
     // 渲染每个股票的新闻
     for (const [symbol, items] of Object.entries(groupedNews)) {
         const stock = portfolioData.find(p => p.code === symbol);
         const stockName = stock ? stock.name : symbol;
-        
+
         html += `
             <div class="mb-6 border-b border-gray-200 pb-6 last:border-0">
                 <div class="flex items-center mb-3">
@@ -881,15 +893,15 @@ function renderNewsList(news) {
                 </div>
                 <div class="space-y-3">
         `;
-        
+
         items.slice(0, 5).forEach(item => {
-            const sentimentColor = item.sentiment === 'positive' ? 'text-green-600' : 
+            const sentimentColor = item.sentiment === 'positive' ? 'text-green-600' :
                                   item.sentiment === 'negative' ? 'text-red-600' : 'text-gray-600';
-            const sentimentIcon = item.sentiment === 'positive' ? '📈' : 
+            const sentimentIcon = item.sentiment === 'positive' ? '📈' :
                                  item.sentiment === 'negative' ? '📉' : '➖';
-            const importanceBadge = item.is_important ? 
+            const importanceBadge = item.is_important ?
                 '<span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">重要</span>' : '';
-            
+
             html += `
                 <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition">
                     <div class="flex items-start justify-between">
@@ -911,13 +923,13 @@ function renderNewsList(news) {
                 </div>
             `;
         });
-        
+
         html += `
                 </div>
             </div>
         `;
     }
-    
+
     container.innerHTML = html;
 }
 
@@ -930,14 +942,14 @@ async function refreshNews() {
             <span class="text-gray-600">正在刷新新闻...</span>
         </div>
     `;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/news/refresh`, {
             method: 'POST'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(`新闻刷新完成，共更新 ${result.results.reduce((sum, r) => sum + r.newNews, 0)} 条`);
             loadAllNews();
@@ -955,7 +967,7 @@ async function loadStockNews(symbol) {
     try {
         const response = await fetch(`${API_BASE_URL}/news/${symbol}?limit=10`);
         const data = await response.json();
-        
+
         return data.news || [];
     } catch (error) {
         console.error(`加载 ${symbol} 新闻失败:`, error);
@@ -976,10 +988,10 @@ if (originalLoadPortfolio2) {
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
-    
+
     toastMessage.textContent = message;
     toast.classList.remove('translate-y-20', 'opacity-0');
-    
+
     setTimeout(() => {
         toast.classList.add('translate-y-20', 'opacity-0');
     }, 3000);
