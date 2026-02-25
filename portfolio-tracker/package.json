@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "init-db": "node backend/init-db.js"
+    "init-db": "node backend/init-db.js",
+    "vercel-build": "echo 'Build complete'"
   },
   "dependencies": {
     "axios": "^1.13.5",
