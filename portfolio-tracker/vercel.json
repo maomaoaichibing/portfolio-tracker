@@ -1,23 +1,4 @@
 {
   "version": 2,
-  "name": "portfolio-tracker",
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/server.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
-    }
-  ],
-  "env": {
-    "KIMI_API_KEY": "@kimi-api-key"
-  }
+  "name": "portfolio-tracker"
 }
