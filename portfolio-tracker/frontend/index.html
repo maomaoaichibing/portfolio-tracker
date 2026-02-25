@@ -3,365 +3,597 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Tracker - 投资监控</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>持仓智投 - 我的持仓</title>
     <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- 导航栏 -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span class="ml-2 text-xl font-bold text-gray-900">Portfolio Tracker</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button onclick="showUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center">
-                        <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        上传持仓
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <style>
+        :root {
+            --primary: #1890FF;
+            --primary-light: #E6F7FF;
+            --rise: #FF4D4F;
+            --rise-bg: #FFF1F0;
+            --fall: #52C41A;
+            --fall-bg: #F6FFED;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8C8C8C;
+            --bg-page: #F5F5F5;
+            --bg-card: #FFFFFF;
+            --border-light: #F0F0F0;
+            --font-number: 'DIN Alternate', 'Roboto Mono', 'SF Mono', monospace;
+        }
 
-    <!-- 主内容区 -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- 统计卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-lg bg-blue-100">
-                        <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">持仓数量</p>
-                        <p class="text-2xl font-bold text-gray-900" id="totalHoldings">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-lg bg-green-100">
-                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">总市值</p>
-                        <p class="text-2xl font-bold text-gray-900" id="totalValue">¥0.00</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-lg bg-purple-100">
-                        <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">今日盈亏</p>
-                        <p class="text-2xl font-bold" id="todayPnL">¥0.00</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-lg bg-orange-100">
-                        <svg class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">监控中</p>
-                        <p class="text-2xl font-bold text-gray-900" id="monitoringCount">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
 
-        <!-- 监控提醒面板 -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-900">监控提醒</h2>
-                <div class="flex space-x-2">
-                    <button onclick="showNewsModal()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                        📰 持仓新闻
-                    </button>
-                    <button onclick="showPriceAlertModal()" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
-                        + 价格预警
-                    </button>
-                    <button onclick="checkMonitoring()" class="text-blue-600 hover:text-blue-800 text-sm font-medium ml-4">
-                        立即检查
-                    </button>
-                    <button onclick="sendDailyReport()" class="text-green-600 hover:text-green-800 text-sm font-medium ml-4">
-                        发送日报
-                    </button>
-                </div>
-            </div>
-            <div id="alertsContainer" class="p-6">
-                <div class="flex items-center justify-center py-8 text-gray-500">
-                    <svg class="h-5 w-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    加载中...
-                </div>
-            </div>
-        </div>
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
 
-        <!-- 数据可视化图表区域 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- 持仓分布饼图 -->
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">持仓分布</h3>
-                    <select id="distributionType" onchange="updateDistributionChart()" class="text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="marketValue">按市值</option>
-                        <option value="industry">按行业</option>
-                        <option value="market">按市场</option>
-                    </select>
-                </div>
-                <div class="relative h-64">
-                    <canvas id="distributionChart"></canvas>
-                </div>
-            </div>
+        /* 导航栏 */
+        .navbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-light);
+            padding: 16px 0;
+            margin-bottom: 20px;
+        }
 
-            <!-- 涨跌趋势图 -->
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">涨跌分布</h3>
-                    <div class="text-sm text-gray-500">
-                        <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span>涨
-                        <span class="inline-block w-3 h-3 bg-red-500 rounded-full ml-2 mr-1"></span>跌
-                    </div>
-                </div>
-                <div class="relative h-64">
-                    <canvas id="changeChart"></canvas>
-                </div>
-            </div>
-        </div>
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        <!-- 持仓列表 -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-900">我的持仓</h2>
-                <div class="flex space-x-2">
-                    <button onclick="refreshPortfolio()" class="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">股票代码</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">股票名称</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">持仓数量</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">当前价格</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">市值</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">盈亏</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">监控状态</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="portfolioTableBody">
-                        <!-- 动态填充 -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyState" class="hidden py-12 text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">暂无持仓</h3>
-                <p class="mt-1 text-sm text-gray-500">上传持仓截图开始监控您的投资</p>
-                <button onclick="showUploadModal()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    上传持仓
-                </button>
-            </div>
-        </div>
-    </main>
+        .nav-brand h1 { font-size: 20px; font-weight: 600; }
 
-    <!-- 上传模态框 -->
-    <div id="uploadModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">上传持仓截图</h3>
-                <button onclick="hideUploadModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6">
-                <!-- 拖拽上传区域 -->
-                <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
-                    <input type="file" id="fileInput" class="hidden" accept="image/*" capture="environment" multiple>
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p class="mt-2 text-sm text-gray-600">点击或拖拽上传持仓截图</p>
-                    <p class="mt-1 text-xs text-gray-400">支持 JPG、PNG 格式，可拍照或从相册选择</p>
-                </div>
-                
-                <!-- 预览区域 -->
-                <div id="previewArea" class="hidden mt-4">
-                    <p class="text-sm font-medium text-gray-700 mb-2">已选择文件:</p>
-                    <div id="previewList" class="space-y-2 max-h-40 overflow-y-auto"></div>
-                </div>
+        .nav-links { display: flex; gap: 8px; }
 
-                <!-- 上传进度 -->
-                <div id="uploadProgress" class="hidden mt-4">
-                    <div class="flex items-center">
-                        <div class="flex-1">
-                            <div class="bg-gray-200 rounded-full h-2">
-                                <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <span id="progressText" class="ml-3 text-sm text-gray-600">0%</span>
-                    </div>
-                    <p id="uploadStatus" class="mt-2 text-sm text-gray-600">正在识别...</p>
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="hideUploadModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">取消</button>
-                <button onclick="uploadFiles()" id="uploadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>开始识别</button>
-            </div>
-        </div>
-    </div>
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
 
-    <!-- 分析结果模态框 -->
-    <div id="analysisModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">AI 持仓分析</h3>
-                <button onclick="hideAnalysisModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[60vh]">
-                <div id="analysisContent" class="space-y-4">
-                    <!-- 动态填充分析结果 -->
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
-                <button onclick="hideAnalysisModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">关闭</button>
-            </div>
-        </div>
-    </div>
+        .nav-links a:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
 
-    <!-- 详情模态框 -->
-    <div id="detailModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900" id="detailTitle">股票详情</h3>
-                <button onclick="hideDetailModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[70vh]" id="detailContent">
-                <!-- 动态填充详情 -->
-            </div>
-        </div>
-    </div>
+        .nav-links a.active {
+            color: var(--primary);
+            font-weight: 500;
+            background: var(--primary-light);
+        }
 
-    <!-- Toast 通知 -->
-    <div id="toast" class="fixed bottom-4 right-4 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center">
-            <span id="toastMessage">操作成功</span>
-        </div>
-    </div>
+        /* 总资产卡片 */
+        .asset-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 20px;
+        }
 
-    <!-- 价格预警模态框 -->
-    <div id="priceAlertModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">设置价格预警</h3>
-                <button onclick="hidePriceAlertModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">股票代码</label>
-                        <select id="alertSymbol" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">选择股票</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">预警类型</label>
-                        <select id="alertType" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <option value="above">🚀 价格突破（上涨到目标价）</option>
-                            <option value="below">⚠️ 价格跌破（下跌到目标价）</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">目标价格</label>
-                        <input type="number" id="alertTargetPrice" step="0.01" placeholder="输入目标价格"
-                            class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    
-                    <div id="currentPriceDisplay" class="hidden bg-gray-50 p-3 rounded-lg">
-                        <p class="text-sm text-gray-600">当前价格: <span id="currentPriceValue" class="font-semibold">--</span></p>
-                    </div>
-                </div>
-            </div>
+        .asset-summary .label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .asset-summary .total-value {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-family: var(--font-number);
+        }
+
+        .asset-summary .stats {
+            display: flex;
+            gap: 32px;
+        }
+
+        .asset-summary .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .asset-summary .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .asset-summary .stat-value {
+            font-size: 18px;
+            font-weight: 500;
+            font-family: var(--font-number);
+        }
+
+        .asset-summary .profit { color: #FFD93D; }
+        .asset-summary .loss { color: #B8E6FF; }
+
+        /* 市场筛选 Tab */
+        .market-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+
+        .market-tabs button {
+            padding: 8px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .market-tabs button:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .market-tabs button.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+        }
+
+        /* 持仓表格 */
+        .portfolio-table-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+        }
+
+        .portfolio-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .portfolio-table th {
+            background: #FAFAFA;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-light);
+            white-space: nowrap;
+        }
+
+        .portfolio-table th.right { text-align: right; }
+
+        .portfolio-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+            vertical-align: middle;
+        }
+
+        .portfolio-table tr:hover {
+            background: #FAFAFA;
+        }
+
+        .portfolio-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 股票名称列 */
+        .stock-name-cell {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stock-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .stock-code {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .market-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .market-tag.hk { background: #E6F7FF; color: #1890FF; }
+        .market-tag.us { background: #F6FFED; color: #52C41A; }
+        .market-tag.a { background: #FFF1F0; color: #FF4D4F; }
+
+        /* 数字列 */
+        .number-cell {
+            text-align: right;
+            font-family: var(--font-number);
+        }
+
+        .number-cell .main {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .number-cell .sub {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        /* 盈亏颜色 */
+        .text-rise { color: var(--rise) !important; }
+        .text-fall { color: var(--fall) !important; }
+
+        /* 占比条 */
+        .ratio-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ratio-bar .bar {
+            width: 60px;
+            height: 6px;
+            background: #F0F0F0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .ratio-bar .bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .ratio-bar .text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: var(--font-number);
+            min-width: 45px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* 按钮 */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #096DD9;
+            transform: translateY(-1px);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .portfolio-table {
+                display: block;
+                overflow-x: auto;
+            }
             
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="hidePriceAlertModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">取消</button>
-                <button onclick="createPriceAlert()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">创建预警</button>
+            .asset-summary .total-value {
+                font-size: 28px;
+            }
+            
+            .asset-summary .stats {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
             </div>
+            <div class="nav-links">
+                <a href="index.html" class="active">我的持仓</a>
+                <a href="monitor.html">AI监控</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="agent.html">🤖 AI Agent</a>
+            </div>
+        </nav>
+
+        <!-- 总资产概览 -->
+        <div class="asset-summary">
+            <div class="label">总资产 (HKD)</div>
+            <div class="total-value" id="totalAssets">--</div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">今日盈亏</span>
+                    <span class="stat-value" id="todayPnl">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">持仓盈亏</span>
+                    <span class="stat-value" id="totalPnl">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">持仓数量</span>
+                    <span class="stat-value" id="holdingCount">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 市场筛选 -->
+        <div class="market-tabs">
+            <button class="active" data-market="all" onclick="filterMarket('all')">全部</button>
+            <button data-market="HK" onclick="filterMarket('HK')">港股</button>
+            <button data-market="US" onclick="filterMarket('US')">美股</button>
+            <button data-market="A" onclick="filterMarket('A')">A股</button>
+        </div>
+
+        <!-- 持仓表格 -->
+        <div class="portfolio-table-container">
+            <table class="portfolio-table">
+                <thead>
+                    <tr>
+                        <th>名称/代码</th>
+                        <th class="right">市值/数量</th>
+                        <th class="right">现价/成本</th>
+                        <th class="right">今日盈亏</th>
+                        <th class="right">持仓盈亏</th>
+                        <th class="right">持仓占比</th>
+                    </tr>
+                </thead>
+                <tbody id="portfolioTableBody">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1890FF" stroke-width="2">
+                                    <path d="M12 2v20M2 12h20"/>
+                                </svg>
+                            </div>
+                            <div class="empty-state-title">暂无持仓</div>
+                            <div class="empty-state-desc">上传持仓截图，开始智能监控</div>
+                            <button class="btn-primary" onclick="alert('上传功能开发中')">上传持仓</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- 新闻详情模态框 -->
-    <div id="newsModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">📰 持仓新闻监控</h3>
-                <div class="flex items-center space-x-3">
-                    <button onclick="refreshNews()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        🔄 刷新新闻
-                    </button>
-                    <button onclick="hideNewsModal()" class="text-gray-400 hover:text-gray-600">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[70vh]" id="newsContent">
-                <!-- 新闻内容将动态填充 -->
-                <div class="flex items-center justify-center py-12">
-                    <div class="loading-spinner mr-3"></div>
-                    <span class="text-gray-600">加载中...</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <script>
+        const API_BASE_URL = `${window.location.protocol}//${window.location.host}`;
+        let portfolioData = [];
+        let currentFilter = 'all';
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/app.js?v=5"></script>
-    <script src="js/charts.js"></script>
+        // 格式化金额
+        function formatAmount(amount, currency = 'HKD') {
+            if (amount === null || amount === undefined) return '--';
+            const num = Number(amount);
+            if (Math.abs(num) >= 1000000) {
+                return (num / 1000000).toFixed(2) + 'M';
+            } else if (Math.abs(num) >= 1000) {
+                return (num / 1000).toFixed(2) + 'K';
+            }
+            return num.toFixed(2);
+        }
+
+        // 格式化数字（带千分位）
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '--';
+            return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // 获取涨跌样式
+        function getChangeClass(value) {
+            const num = Number(value);
+            if (num > 0) return 'text-rise';
+            if (num < 0) return 'text-fall';
+            return '';
+        }
+
+        // 格式化涨跌（带+号）
+        function formatChange(value) {
+            if (value === null || value === undefined) return '--';
+            const num = Number(value);
+            const sign = num >= 0 ? '+' : '';
+            return sign + formatNumber(num);
+        }
+
+        // 获取市场标签
+        function getMarketTag(market) {
+            if (market === 'HK' || market === '港股') return '<span class="market-tag hk">港股</span>';
+            if (market === 'US') return '<span class="market-tag us">美股</span>';
+            if (market === 'A' || market === 'A股') return '<span class="market-tag a">A股</span>';
+            return '';
+        }
+
+        // 筛选市场
+        function filterMarket(market) {
+            currentFilter = market;
+            
+            // 更新按钮样式
+            document.querySelectorAll('.market-tabs button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.market === market);
+            });
+            
+            renderTable();
+        }
+
+        // 加载持仓数据
+        async function loadPortfolio() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/portfolio`);
+                const data = await response.json();
+                
+                if (data.portfolio && data.portfolio.length > 0) {
+                    portfolioData = data.portfolio.map(item => ({
+                        ...item,
+                        marketValue: (item.price || 0) * item.shares,
+                        pnl: item.price && item.avg_cost ? (item.price - item.avg_cost) * item.shares : 0,
+                        pnlPercent: item.avg_cost ? ((item.price - item.avg_cost) / item.avg_cost * 100) : 0,
+                        // 模拟今日盈亏（实际应从API获取）
+                        todayPnl: item.price ? (item.price * 0.02 * item.shares * (Math.random() - 0.5)) : 0
+                    }));
+                    
+                    updateSummary();
+                    renderTable();
+                }
+            } catch (error) {
+                console.error('加载持仓失败:', error);
+            }
+        }
+
+        // 更新汇总数据
+        function updateSummary() {
+            const totalValue = portfolioData.reduce((sum, item) => sum + item.marketValue, 0);
+            const totalPnl = portfolioData.reduce((sum, item) => sum + item.pnl, 0);
+            const todayPnl = portfolioData.reduce((sum, item) => sum + item.todayPnl, 0);
+            
+            document.getElementById('totalAssets').textContent = formatNumber(totalValue);
+            
+            const todayPnlEl = document.getElementById('todayPnl');
+            todayPnlEl.textContent = formatChange(todayPnl);
+            todayPnlEl.className = 'stat-value ' + getChangeClass(todayPnl);
+            
+            const totalPnlEl = document.getElementById('totalPnl');
+            totalPnlEl.textContent = formatChange(totalPnl);
+            totalPnlEl.className = 'stat-value ' + getChangeClass(totalPnl);
+            
+            document.getElementById('holdingCount').textContent = portfolioData.length;
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('portfolioTableBody');
+            
+            // 筛选数据
+            let filteredData = portfolioData;
+            if (currentFilter !== 'all') {
+                filteredData = portfolioData.filter(item => {
+                    if (currentFilter === 'HK') return item.market === 'HK' || item.market === '港股';
+                    if (currentFilter === 'US') return item.market === 'US';
+                    if (currentFilter === 'A') return item.market === 'A' || item.market === 'A股';
+                    return true;
+                });
+            }
+            
+            // 计算总市值用于占比
+            const totalValue = portfolioData.reduce((sum, item) => sum + item.marketValue, 0);
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1890FF" stroke-width="2">
+                                    <path d="M12 2v20M2 12h20"/>
+                                </svg>
+                            </div>
+                            <div class="empty-state-title">暂无持仓</div>
+                            <div class="empty-state-desc">该市场下没有持仓</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredData.map(item => {
+                const ratio = totalValue > 0 ? (item.marketValue / totalValue * 100) : 0;
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="stock-name-cell">
+                                <div class="stock-name">
+                                    ${item.name}
+                                    ${getMarketTag(item.market)}
+                                </div>
+                                <div class="stock-code">${item.symbol}</div>
+                            </div>
+                        </td>
+                        <td class="number-cell">
+                            <div class="main">${formatNumber(item.marketValue)}</div>
+                            <div class="sub">${item.shares}股</div>
+                        </td>
+                        <td class="number-cell">
+                            <div class="main">${formatNumber(item.price)}</div>
+                            <div class="sub">${formatNumber(item.avg_cost)}</div>
+                        </td>
+                        <td class="number-cell">
+                            <div class="main ${getChangeClass(item.todayPnl)}">${formatChange(item.todayPnl)}</div>
+                            <div class="sub ${getChangeClass(item.todayPnl / item.marketValue * 100)}">${formatChange(item.todayPnl / item.marketValue * 100)}%</div>
+                        </td>
+                        <td class="number-cell">
+                            <div class="main ${getChangeClass(item.pnl)}">${formatChange(item.pnl)}</div>
+                            <div class="sub ${getChangeClass(item.pnlPercent)}">${formatChange(item.pnlPercent)}%</div>
+                        </td>
+                        <td>
+                            <div class="ratio-bar">
+                                <div class="bar">
+                                    <div class="bar-fill" style="width: ${Math.min(ratio, 100)}%"></div>
+                                </div>
+                                <span class="text">${ratio.toFixed(1)}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', loadPortfolio);
+    </script>
 </body>
 </html>

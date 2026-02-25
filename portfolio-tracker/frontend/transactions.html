@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易记录 - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/transactions.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="portfolio.html">我的持仓</a>
+                <a href="transactions.html" class="active">交易记录</a>
+                <a href="profit.html">收益分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h2>📝 交易记录</h2>
+            <button class="btn-primary" onclick="showAddModal()">+ 添加交易</button>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-cards" id="statsCards">
+            <div class="stat-card">
+                <div class="stat-label">总交易次数</div>
+                <div class="stat-value" id="totalCount">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">买入金额</div>
+                <div class="stat-value" id="totalBuy">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">卖出金额</div>
+                <div class="stat-value" id="totalSell">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">累计费用</div>
+                <div class="stat-value" id="totalFee">--</div>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <input type="text" id="filterSymbol" placeholder="股票代码" class="filter-input">
+            <input type="date" id="filterStartDate" class="filter-input">
+            <span class="filter-sep">至</span>
+            <input type="date" id="filterEndDate" class="filter-input">
+            <button class="btn-secondary" onclick="loadTransactions()">筛选</button>
+            <button class="btn-text" onclick="resetFilter()">重置</button>
+        </div>
+
+        <!-- 交易列表 -->
+        <div class="transactions-table-container">
+            <table class="transactions-table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>股票</th>
+                        <th>操作</th>
+                        <th>数量</th>
+                        <th>价格</th>
+                        <th>金额</th>
+                        <th>费用</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsList">
+                    <tr><td colspan="9" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 添加交易弹窗 -->
+    <div class="modal" id="addModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加交易记录</h3>
+                <button class="btn-close" onclick="hideAddModal()">×</button>
+            </div>
+            
+            <form id="transactionForm" onsubmit="submitTransaction(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>股票代码 *</label>
+                        <input type="text" name="symbol" placeholder="如: 000001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>股票名称 *</label>
+                        <input type="text" name="name" placeholder="如: 平安银行" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>操作类型 *</label>
+                        <select name="action" required>
+                            <option value="buy">买入</option>
+                            <option value="sell">卖出</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>交易日期 *</label>
+                        <input type="date" name="date" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>数量 *</label>
+                        <input type="number" name="shares" placeholder="100" min="1" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>价格 *</label>
+                        <input type="number" name="price" placeholder="10.50" min="0.01" step="0.01" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>手续费</label>
+                        <input type="number" name="fee" placeholder="5" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>印花税</label>
+                        <input type="number" name="tax" placeholder="0" min="0" step="0.01" value="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>备注</label>
+                    <input type="text" name="notes" placeholder="可选">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="hideAddModal()">取消</button>
+                    <button type="submit" class="btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/transactions.js"></script>
+</body>
+</html>

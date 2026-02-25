@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/agent.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">我的持仓</a>
+                <a href="monitor.html">AI监控</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="agent.html" class="active">🤖 AI Agent</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <div class="header-content">
+                <h2>🤖 AI Agent 工作流</h2>
+                <p class="subtitle">自动化投资研究助手，让AI为你工作</p>
+            </div>
+            <div class="agent-status" id="agentStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">运行中</span>
+            </div>
+        </div>
+
+        <!-- Agent 工作原理说明 -->
+        <div class="agent-intro">
+            <div class="intro-header">
+                <h3>💡 Agent 是如何工作的？</h3>
+                <button class="toggle-btn" onclick="toggleIntro()"><span id="introToggle">收起</span></button>
+            </div>            
+            <div class="intro-content" id="introContent">
+                <div class="workflow-diagram">
+                    <div class="workflow-step">
+                        <div class="step-icon">🔍</div>
+                        <div class="step-content">
+                            <div class="step-title">发现</div>
+                            <div class="step-desc">扫描市场，寻找符合条件的股票</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">→</div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-icon">🧠</div>
+                        <div class="step-content">
+                            <div class="step-title">分析</div>
+                            <div class="step-desc">AI深度分析基本面和趋势</div>
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-arrow">→</div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-icon">👁️</div>
+                        <div class="step-content">
+                            <div class="step-title">监控</div>
+                            <div class="step-desc">持续跟踪价格、新闻变化</div>
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-arrow">→</div>
+                    
+                    <div class="workflow-step">
+                        <div class="step-icon">🔔</div>
+                        <div class="step-content">
+                            <div class="step-title">提醒</div>
+                            <div class="step-desc">符合条件时主动推送给你</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="intro-features">
+                    <div class="feature-item">
+                        <span class="feature-icon">⚡</span>
+                        <span><strong>自动化执行：</strong>无需手动操作，Agent 按设定规则自动运行</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span><strong>透明可追溯：</strong>每个决策都有记录，随时查看为什么做</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🎯</span>
+                        <span><strong>人机协作：</strong>AI做筛选，你做最终决策</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工作流模板 -->
+        <div class="templates-section">
+            <div class="section-header">
+                <h3>📋 选择工作流模板</h3>
+                <p class="section-desc">选择一个预设模板，或创建自定义工作流</p>
+            </div>
+            
+            <div class="templates-grid" id="templatesGrid">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 运行中的工作流 -->
+        <div class="active-workflows">
+            <div class="section-header">
+                <h3>▶️ 运行中的工作流</h3>
+                <p class="section-desc">当前激活的自动化任务</p>
+            </div>
+            
+            <div class="workflows-list" id="activeWorkflows">
+                <div class="empty">暂无运行中的工作流</div>
+            </div>
+        </div>
+
+        <!-- 执行记录 -->
+        <div class="execution-logs">
+            <div class="section-header">
+                <h3>📜 执行记录</h3>
+                <p class="section-desc">查看 Agent 的工作历史和决策过程</p>
+            </div>
+            
+            <div class="logs-filter">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="success">成功</button>
+                <button class="filter-btn" data-filter="failed">失败</button>
+            </div>
+            
+            <div class="logs-timeline" id="logsTimeline">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 执行详情弹窗 -->
+    <div class="modal" id="executionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔍 执行详情</h3>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/agent.js"></script>
+</body>
+</html>

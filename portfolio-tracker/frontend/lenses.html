@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智投镜头 - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/lenses.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="portfolio.html">我的持仓</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="lenses.html" class="active">智投镜头</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h2>🔍 智投镜头</h2>
+            <p class="subtitle">切换不同视角，发现持仓的另一面</p>
+        </div>
+
+        <!-- 镜头选择区 -->
+        <div class="lens-selector">
+            <h3>选择视角</h3>
+            <div class="lens-grid" id="lensGrid">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 综合对比 -->
+        <div class="comparison-section">
+            <div class="section-header">
+                <h3>📊 多视角对比</h3>
+                <button class="refresh-btn" onclick="loadComparison()">🔄 刷新对比</button>
+            </div>
+            <div class="comparison-chart" id="comparisonChart">
+                <div class="empty">点击上方镜头查看详细分析</div>
+            </div>
+        </div>
+
+        <!-- 分析结果 -->
+        <div class="analysis-result" id="analysisResult" style="display: none;">
+            <div class="result-header">
+                <div class="lens-info">
+                    <span class="lens-icon" id="resultIcon">📈</span>
+                    <div class="lens-title">
+                        <h3 id="resultName">趋势镜头</h3>
+                        <p id="resultDesc">关注价格动量、技术形态、资金流向</p>
+                    </div>
+                </div>
+                <div class="score-display">
+                    <div class="score-value" id="resultScore">--</div>
+                    <div class="score-label" id="resultLevel">--</div>
+                </div>
+            </div>
+
+            <!-- 强项弱项 -->
+            <div class="strengths-weaknesses">
+                <div class="strengths" id="strengthsSection">
+                    <h4>💪 强项</h4>
+                    <ul id="strengthsList"></ul>
+                </div>
+                <div class="weaknesses" id="weaknessesSection">
+                    <h4>⚠️ 弱项</h4>
+                    <ul id="weaknessesList"></ul>
+                </div>
+            </div>
+
+            <!-- 持仓评分表 -->
+            <div class="stock-scores-section">
+                <h4>📋 持仓评分</h4>
+                <div class="stock-scores-table">
+                    <table class="score-table">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>股票</th>
+                                <th>得分</th>
+                                <th>评价</th>
+                                <th>建议</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockScoresList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 建议 -->
+            <div class="recommendations-section">
+                <h4>💡 投资建议</h4>
+                <div class="recommendations-list" id="recommendationsList">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/lenses.js"></script>
+</body>
+</html>

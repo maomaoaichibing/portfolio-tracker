@@ -1,0 +1,437 @@
+/** 智投镜头页面样式 */
+
+/* 页面头部 */
+.page-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+}
+
+.page-header .subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+/* 镜头选择区 */
+.lens-selector {
+    margin-bottom: 40px;
+}
+
+.lens-selector h3 {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.lens-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.lens-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.lens-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.lens-icon-large {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.lens-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.lens-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* 对比区域 */
+.comparison-section {
+    margin-bottom: 40px;
+    padding: 24px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.refresh-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: var(--border-color);
+}
+
+/* 对比条形图 */
+.comparison-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 16px;
+}
+
+.bar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 140px;
+    flex-shrink: 0;
+}
+
+.bar-icon {
+    font-size: 20px;
+}
+
+.bar-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.bar-container {
+    flex: 1;
+    height: 24px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.5s ease;
+}
+
+.bar-score {
+    width: 60px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* 分析结果 */
+.analysis-result {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--card-bg) 100%);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.lens-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.lens-icon {
+    font-size: 48px;
+}
+
+.lens-title h3 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+}
+
+.lens-title p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.score-display {
+    text-align: center;
+}
+
+.score-value {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+/* 强项弱项 */
+.strengths-weaknesses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.strengths h4,
+.weaknesses h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+}
+
+.strengths ul,
+.weaknesses ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.strengths li,
+.weaknesses li {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.strengths {
+    color: var(--success-color);
+}
+
+.weaknesses {
+    color: var(--danger-color);
+}
+
+/* 持仓评分表 */
+.stock-scores-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stock-scores-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+}
+
+.score-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.score-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.score-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.score-table tr:last-child td {
+    border-bottom: none;
+}
+
+.score-table .rank {
+    font-weight: 600;
+    color: var(--text-secondary);
+    width: 50px;
+}
+
+.score-table .stock-name {
+    min-width: 120px;
+}
+
+.score-table .stock-name .name {
+    font-weight: 500;
+}
+
+.score-table .stock-name .code {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.score-table .score {
+    font-weight: 600;
+    font-size: 16px;
+    width: 60px;
+}
+
+.score-table .score.excellent {
+    color: #52c41a;
+}
+
+.score-table .score.good {
+    color: #1890ff;
+}
+
+.score-table .score.average {
+    color: #faad14;
+}
+
+.score-table .score.poor {
+    color: #f5222d;
+}
+
+.score-table .evaluation {
+    width: 80px;
+}
+
+.score-table .suggestion {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* 建议区域 */
+.recommendations-section {
+    padding: 24px;
+}
+
+.recommendations-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+}
+
+.recommendation-item {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.recommendation-item.positive {
+    background: rgba(82, 196, 26, 0.1);
+    border-left: 4px solid #52c41a;
+}
+
+.recommendation-item.warning {
+    background: rgba(250, 173, 20, 0.1);
+    border-left: 4px solid #faad14;
+}
+
+.recommendation-item.action {
+    background: rgba(24, 144, 255, 0.1);
+    border-left: 4px solid #1890ff;
+}
+
+.recommendation-item.general {
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--border-color);
+}
+
+.rec-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.rec-content {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* 加载和空状态 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.error {
+    text-align: center;
+    padding: 40px;
+    color: var(--danger-color);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .lens-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .lens-card {
+        padding: 16px 12px;
+    }
+    
+    .lens-icon-large {
+        font-size: 36px;
+    }
+    
+    .strengths-weaknesses {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .score-value {
+        font-size: 36px;
+    }
+    
+    .comparison-bar {
+        flex-wrap: wrap;
+    }
+    
+    .bar-label {
+        width: 100%;
+    }
+    
+    .bar-container {
+        order: 2;
+        width: calc(100% - 70px);
+    }
+    
+    .bar-score {
+        order: 3;
+        width: 60px;
+    }
+}

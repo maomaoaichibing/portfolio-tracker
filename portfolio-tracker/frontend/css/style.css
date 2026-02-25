@@ -1,6 +1,105 @@
-/* 自定义样式 */
+/* 智投应用 - UI 优化样式 */
 
-/* 动画效果 */
+/* ========================================
+   CSS 变量定义
+   ======================================== */
+:root {
+  /* 主色 */
+  --primary: #1890FF;
+  --primary-light: #E6F7FF;
+  --primary-dark: #096DD9;
+  
+  /* A股涨跌颜色 - 红涨绿跌 */
+  --rise: #FF4D4F;
+  --rise-bg: #FFF1F0;
+  --rise-light: #FF7875;
+  --fall: #52C41A;
+  --fall-bg: #F6FFED;
+  --fall-light: #95DE64;
+  
+  /* 文字色 */
+  --text-primary: #262626;
+  --text-secondary: #595959;
+  --text-tertiary: #8C8C8C;
+  --text-disabled: #BFBFBF;
+  
+  /* 背景色 */
+  --bg-page: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --bg-hover: #FAFAFA;
+  --bg-pressed: #F0F0F0;
+  
+  /* 边框 */
+  --border-light: #F0F0F0;
+  --border-base: #D9D9D9;
+  --border-dark: #BFBFBF;
+  
+  /* 字体 */
+  --font-number: 'DIN Alternate', 'Roboto Mono', 'SF Mono', monospace;
+}
+
+/* ========================================
+   涨跌颜色类
+   ======================================== */
+.text-rise {
+  color: var(--rise) !important;
+}
+
+.text-fall {
+  color: var(--fall) !important;
+}
+
+.bg-rise {
+  background-color: var(--rise-bg) !important;
+}
+
+.bg-fall {
+  background-color: var(--fall-bg) !important;
+}
+
+/* 旧类名兼容（如果其他地方还在用） */
+.profit, .text-profit {
+  color: var(--rise) !important;
+}
+
+.loss, .text-loss {
+  color: var(--fall) !important;
+}
+
+/* ========================================
+   数字字体（等宽）
+   ======================================== */
+.font-number {
+  font-family: var(--font-number);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.price, .amount, .percentage, .summary-value {
+  font-family: var(--font-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========================================
+   核心数据样式
+   ======================================== */
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+/* ========================================
+   动画效果
+   ======================================== */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -10,24 +109,34 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+/* 价格更新闪烁动画 */
+@keyframes flashRise {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(255, 77, 79, 0.15); }
+}
+
+@keyframes flashFall {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(82, 196, 26, 0.15); }
+}
+
+.price-up-rise {
+  animation: flashRise 0.6s ease;
+}
+
+.price-up-fall {
+  animation: flashFall 0.6s ease;
+}
+
 /* 表格行悬停效果 */
 .table-row-hover:hover {
-    background-color: #f9fafb;
+    background-color: var(--bg-hover);
 }
 
 /* 拖拽区域激活状态 */
 .drop-zone-active {
-    border-color: #3b82f6 !important;
-    background-color: #eff6ff !important;
-}
-
-/* 盈亏颜色 */
-.profit {
-    color: #dc2626;
-}
-
-.loss {
-    color: #16a34a;
+    border-color: var(--primary) !important;
+    background-color: var(--primary-light) !important;
 }
 
 /* 滚动条样式 */
@@ -62,7 +171,7 @@
 /* 加载动画 */
 .loading-spinner {
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #3b82f6;
+    border-top: 3px solid var(--primary);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -99,13 +208,13 @@
 
 /* 情感标签 */
 .sentiment-positive {
-    background-color: #d1fae5;
-    color: #065f46;
+    background-color: var(--fall-bg);
+    color: var(--fall);
 }
 
 .sentiment-negative {
-    background-color: #fee2e2;
-    color: #991b1b;
+    background-color: var(--rise-bg);
+    color: var(--rise);
 }
 
 .sentiment-neutral {
@@ -121,4 +230,263 @@
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
+}
+
+/* ========================================
+   导航栏样式
+   ======================================== */
+.navbar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+
+.navbar .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.nav-brand h1 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.nav-links a.active {
+  color: var(--primary);
+  font-weight: 500;
+  background: var(--primary-light);
+}
+
+/* 页面标题 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 容器 */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ========================================
+   持仓卡片样式
+   ======================================== */
+.stock-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.stock-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.stock-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.stock-code {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.stock-price {
+  text-align: right;
+}
+
+.stock-price .price {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stock-price .change {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.stock-profit {
+  text-align: right;
+  min-width: 100px;
+}
+
+.stock-profit .profit {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stock-profit .profit-pct {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ========================================
+   统计卡片
+   ======================================== */
+.summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.summary-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* ========================================
+   空状态
+   ======================================== */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.empty-state-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--primary-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.empty-state-icon svg {
+  width: 40px;
+  height: 40px;
+  color: var(--primary);
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+/* ========================================
+   按钮样式
+   ======================================== */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   移动端适配
+   ======================================== */
+@media (max-width: 768px) {
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .summary-value {
+    font-size: 24px;
+  }
+  
+  .stock-card {
+    padding: 12px;
+  }
+  
+  .stock-name {
+    font-size: 15px;
+  }
+  
+  .stock-price .price {
+    font-size: 16px;
+  }
+}
+
+/* iPhone 安全区适配 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

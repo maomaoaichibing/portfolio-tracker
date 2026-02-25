@@ -456,6 +456,42 @@ function generateMockStockLogic(symbol, name) {
     };
 }
 
+/**
+ * 通用聊天接口
+ * @param {Array} messages - 消息列表
+ * @returns {Promise<Object>} AI回复
+ */
+async function chat(messages) {
+    if (MOCK_MODE) {
+        console.log('[模拟模式] 聊天接口');
+        return {
+            content: '今日市场整体呈现震荡上行态势，半导体板块表现强势，微导纳米、盛科通信等个股涨幅超过10%。市场热点集中在科技成长领域，建议投资者关注业绩确定性较高的龙头企业。风险提示：部分高位股存在回调压力。'
+        };
+    }
+    
+    try {
+        const response = await axios.post(KIMI_API_URL, {
+            model: 'moonshot-v1-8k',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 500
+        }, {
+            headers: {
+                'Authorization': `Bearer ${KIMI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 30000
+        });
+        
+        return {
+            content: response.data.choices[0].message.content
+        };
+    } catch (error) {
+        console.error('AI聊天失败:', error.message);
+        throw error;
+    }
+}
+
 function generateMockPortfolioAnalysis(portfolio) {
     const sectors = [...new Set(portfolio.map(p => p.market))];
     const sectorAnalysis = sectors.map((s, i) => ({
@@ -488,11 +524,63 @@ function generateMockPortfolioAnalysis(portfolio) {
     };
 }
 
+/**
+ * 通用AI分析 - 基于提示词生成分析
+ * @param {string} prompt - 分析提示词
+ * @returns {Promise<string>} AI生成的分析结果
+ */
+async function analyze(prompt) {
+    if (MOCK_MODE) {
+        console.log('[模拟模式] AI分析');
+        // 返回模拟的分析结果
+        return JSON.stringify({
+            "综合建议": {
+                "action": "建议持有",
+                "confidence": 65,
+                "reasoning": "当前多空因素交织，股价处于震荡区间。基本面稳健但缺乏明确催化剂，建议观望等待更明确信号。"
+            },
+            "镜头建议": [
+                { "name": "价值投资者", "action": "持有观望", "confidence": 70, "reasoning": "估值处于合理区间，未出现明显低估或高估。", "operationAdvice": "等待更好的入场时机。" },
+                { "name": "趋势跟踪者", "action": "观望", "confidence": 55, "reasoning": "当前无明显趋势，处于震荡整理阶段。", "operationAdvice": "等待趋势确立后再跟进。" },
+                { "name": "量化交易者", "action": "持有", "confidence": 60, "reasoning": "统计信号中性，没有强烈的买卖信号。", "operationAdvice": "维持当前仓位，等待信号明确。" },
+                { "name": "宏观对冲者", "action": "持有", "confidence": 65, "reasoning": "宏观环境中性，无重大政策风险或利好。", "operationAdvice": "维持配置，关注政策变化。" },
+                { "name": "事件驱动者", "action": "观望", "confidence": 50, "reasoning": "近期无重大事件催化剂。", "operationAdvice": "等待事件窗口期。" },
+                { "name": "长期持有者", "action": "继续持有", "confidence": 75, "reasoning": "长期逻辑未变，短期波动不影响长期价值。", "operationAdvice": "忽略短期波动，坚持定投。" }
+            ]
+        });
+    }
+
+    try {
+        const response = await axios.post(KIMI_API_URL, {
+            model: 'moonshot-v1-8k',
+            messages: [
+                { role: 'system', content: '你是一位专业的投资分析师，擅长多维度分析股票。请基于提供的数据给出客观、专业的投资建议。' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+        }, {
+            headers: {
+                'Authorization': `Bearer ${KIMI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 60000
+        });
+
+        return response.data.choices[0].message.content;
+    } catch (error) {
+        console.error('AI分析失败:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     recognizePortfolio,
     analyzePortfolio,
     analyzeStockLogic,
     detectLogicChange,
     analyzeResearchReport,
+    chat,
+    analyze,
     MOCK_MODE
 };

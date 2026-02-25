@@ -1,0 +1,616 @@
+/** AI Agent 页面样式 */
+
+/* 页面头部 */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+}
+
+.page-header .subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+
+.agent-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(82, 196, 26, 0.1);
+    border-radius: 20px;
+}
+
+.agent-status .status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.agent-status .status-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--success-color);
+}
+
+/* Agent 介绍 */
+.agent-intro {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 32px;
+    color: white;
+}
+
+.intro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.intro-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.toggle-btn {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.toggle-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.intro-content {
+    transition: all 0.3s ease;
+}
+
+.intro-content.collapsed {
+    display: none;
+}
+
+/* 工作流程图 */
+.workflow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.workflow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 16px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    min-width: 100px;
+}
+
+.workflow-step .step-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.workflow-step .step-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.workflow-step .step-desc {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.workflow-arrow {
+    font-size: 24px;
+    opacity: 0.7;
+}
+
+/* 功能特点 */
+.intro-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.feature-item .feature-icon {
+    font-size: 20px;
+}
+
+/* 区块标题 */
+.section-header {
+    margin-bottom: 20px;
+}
+
+.section-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+}
+
+.section-header .section-desc {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* 模板网格 */
+.templates-section {
+    margin-bottom: 32px;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.template-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    border-color: var(--primary-color);
+}
+
+.template-card .template-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+}
+
+.template-card .template-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.template-card .template-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.template-card .template-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.template-card .btn-run {
+    flex: 1;
+    padding: 10px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.template-card .btn-run:hover {
+    opacity: 0.9;
+}
+
+.template-card .btn-schedule {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.template-card .btn-schedule:hover {
+    background: var(--border-color);
+}
+
+/* 运行中的工作流 */
+.active-workflows {
+    margin-bottom: 32px;
+}
+
+.workflow-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.workflow-item .workflow-icon {
+    font-size: 32px;
+}
+
+.workflow-item .workflow-info {
+    flex: 1;
+}
+
+.workflow-item .workflow-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.workflow-item .workflow-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.workflow-item .workflow-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(82, 196, 26, 0.1);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--success-color);
+}
+
+.workflow-item .workflow-status.running::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--success-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.workflow-item .workflow-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* 执行记录 */
+.execution-logs {
+    margin-bottom: 32px;
+}
+
+.logs-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* 时间线 */
+.logs-timeline {
+    position: relative;
+}
+
+.logs-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.log-item {
+    position: relative;
+    padding-left: 48px;
+    margin-bottom: 20px;
+}
+
+.log-item::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--border-color);
+    border: 3px solid var(--card-bg);
+}
+
+.log-item.success::before {
+    background: var(--success-color);
+}
+
+.log-item.failed::before {
+    background: var(--danger-color);
+}
+
+.log-item.running::before {
+    background: var(--primary-color);
+    animation: pulse 2s infinite;
+}
+
+.log-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.log-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.log-time {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.log-status {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.log-status.success {
+    background: rgba(82, 196, 26, 0.1);
+    color: var(--success-color);
+}
+
+.log-status.failed {
+    background: rgba(245, 34, 45, 0.1);
+    color: var(--danger-color);
+}
+
+.log-status.running {
+    background: rgba(24, 144, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.log-summary {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.6;
+}
+
+.log-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-detail {
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-detail:hover {
+    background: var(--border-color);
+}
+
+/* 弹窗 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    background: var(--border-color);
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(80vh - 80px);
+}
+
+/* 执行详情 */
+.execution-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-section {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+}
+
+.detail-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    color: var(--text-secondary);
+}
+
+.detail-section p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--card-bg);
+    border-radius: 8px;
+}
+
+.action-item .action-icon {
+    font-size: 20px;
+}
+
+.action-item .action-info {
+    flex: 1;
+}
+
+.action-item .action-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.action-item .action-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.action-item .action-status {
+    font-size: 13px;
+}
+
+.action-item .action-status.success {
+    color: var(--success-color);
+}
+
+.action-item .action-status.failed {
+    color: var(--danger-color);
+}
+
+/* 加载和空状态 */
+.loading, .empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+    
+    .workflow-diagram {
+        flex-direction: column;
+    }
+    
+    .workflow-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .templates-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .workflow-item {
+        flex-wrap: wrap;
+    }
+    
+    .log-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+}

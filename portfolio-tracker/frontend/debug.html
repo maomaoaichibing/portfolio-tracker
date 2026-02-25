@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Debug</title>
+</head>
+<body>
+    <div id="attributionGrid"></div>
+    <script>
+        function generateAttributionFactors(symbol) {
+            const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const factorNames = ['行业政策', '业绩预期', '大盘情绪', '资金流向', '技术面'];
+            let remaining = 100;
+            return factorNames.slice(0, 4).map((name, i) => {
+                const percent = i === 3 ? remaining : Math.floor((seed * (i + 1)) % 40) + 10;
+                remaining -= percent;
+                return { name, percent };
+            });
+        }
+
+        function generateMonitoringItems(symbol, market, stock) {
+            const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const items = [];
+            
+            const earningsDate = '2025-03-15';
+            const daysToEarnings = 10;
+            const earningsStatus = daysToEarnings <= 7 ? '⚠️ 即将发布' : '📅 10天后';
+            
+            items.push({
+                icon: '📈',
+                name: '业绩预期',
+                desc: `下次财报: ${earningsDate}`,
+                detail: '建议关注',
+                status: earningsStatus,
+                statusColor: 'orange',
+                bgColor: 'background: #E6F7FF;'
+            });
+            
+            return items;
+        }
+        
+        function generateAIInsight(item, stock) {
+            return `测试解读: ${item.name}`;
+        }
+        
+        function showAIInsight(symbol, name, itemName, status, desc) {
+            alert(`${name} - ${itemName}: ${status}`);
+        }
+        
+        function handleAIInsightClick(e) {
+            const btn = e.target.closest('.ai-insight-btn');
+            if (!btn) return;
+            
+            const symbol = btn.dataset.symbol;
+            const name = btn.dataset.name;
+            const itemName = btn.dataset.item;
+            const status = decodeURIComponent(btn.dataset.status);
+            const desc = decodeURIComponent(btn.dataset.desc);
+            
+            showAIInsight(symbol, name, itemName, status, desc);
+        }
+        
+        function renderAttributionGrid(portfolio) {
+            const container = document.getElementById('attributionGrid');
+            if (!container) return;
+            
+            container.innerHTML = portfolio.map(stock => {
+                const factors = generateAttributionFactors(stock.symbol);
+                const monitoringItems = generateMonitoringItems(stock.symbol, stock.market, stock);
+                
+                return `
+                    <div class="monitor-card">
+                        <div>${stock.name} (${stock.symbol})</div>
+                        <div>
+                            ${monitoringItems.map(item => `
+                                <div>
+                                    <span>${item.name}: ${item.status}</span>
+                                    <button class="ai-insight-btn" data-symbol="${stock.symbol}" data-name="${stock.name}" data-item="${item.name}" data-status="${encodeURIComponent(item.status)}" data-desc="${encodeURIComponent(item.desc)}">AI解读</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 测试数据
+        const testPortfolio = [
+            { symbol: '00700', name: '腾讯', market: 'HK' },
+            { symbol: 'BABA', name: '阿里', market: 'US' }
+        ];
+        
+        renderAttributionGrid(testPortfolio);
+        
+        const attributionGrid = document.getElementById('attributionGrid');
+        if (attributionGrid) {
+            attributionGrid.addEventListener('click', handleAIInsightClick);
+        }
+    </script>
+</body>
+</html>

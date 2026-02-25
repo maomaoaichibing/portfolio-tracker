@@ -2,41 +2,36 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>API Test</title>
+    <title>Test</title>
 </head>
 <body>
-    <h1>API连接测试</h1>
-    <div id="status">测试中...</div>
-    <pre id="result"></pre>
-
+    <div id="test"></div>
     <script>
-        const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
-        
-        async function testAPI() {
-            const statusDiv = document.getElementById('status');
-            const resultDiv = document.getElementById('result');
+        function generateMonitoringItems(symbol, market, stock) {
+            const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const items = [];
             
-            try {
-                console.log('Testing API:', API_BASE_URL + '/portfolio');
-                const response = await fetch(API_BASE_URL + '/portfolio');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('API Response:', data);
-                
-                statusDiv.innerHTML = '<span style="color: green">✅ API连接成功</span>';
-                resultDiv.textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                console.error('API Error:', error);
-                statusDiv.innerHTML = '<span style="color: red">❌ API连接失败</span>';
-                resultDiv.textContent = '错误: ' + error.message;
-            }
+            items.push({
+                icon: '📈',
+                name: '业绩预期',
+                desc: `下次财报: 2025-03-15 | EPS预期: 3.2元`,
+                detail: '建议关注业绩前瞻分析',
+                status: '⚠️ 即将发布',
+                statusColor: 'orange',
+                bgColor: 'background: #E6F7FF;'
+            });
+            
+            return items;
         }
         
-        testAPI();
+        const stock = { symbol: '00700', name: '腾讯', market: 'HK' };
+        const items = generateMonitoringItems(stock.symbol, stock.market, stock);
+        
+        document.getElementById('test').innerHTML = items.map(item => `
+            <div>
+                <button onclick="alert('${item.name}')">${item.name}</button>
+            </div>
+        `).join('');
     </script>
 </body>
 </html>

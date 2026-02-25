@@ -1,0 +1,476 @@
+/** 热门股票页面样式 */
+
+/* 页面头部 */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h2 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.update-time {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* 市场概览卡片 */
+.market-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.overview-card {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.overview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.overview-card.gainers:hover {
+    border-color: var(--success-color);
+}
+
+.overview-card.losers:hover {
+    border-color: var(--danger-color);
+}
+
+.overview-card.volume:hover {
+    border-color: var(--primary-color);
+}
+
+.overview-card.sectors:hover {
+    border-color: var(--warning-color);
+}
+
+.card-icon {
+    font-size: 32px;
+    margin-right: 16px;
+}
+
+.card-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+}
+
+.card-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* 标签切换 */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* 标签内容 */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 区块头部 */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.refresh-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: var(--bg-secondary);
+}
+
+/* 股票表格 */
+.stock-table-container {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.stock-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.stock-table th {
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stock-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stock-table tr:last-child td {
+    border-bottom: none;
+}
+
+.stock-table tr:hover {
+    background: var(--bg-secondary);
+}
+
+.stock-table .rank {
+    font-weight: 600;
+    color: var(--text-secondary);
+    width: 50px;
+}
+
+.stock-table .stock-name {
+    min-width: 120px;
+}
+
+.stock-table .stock-name .name {
+    font-weight: 500;
+}
+
+.stock-table .stock-name .code {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.stock-table .up {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.stock-table .down {
+    color: var(--danger-color);
+    font-weight: 500;
+}
+
+/* 板块网格 */
+.sector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.sector-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.sector-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sector-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sector-header .rank {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.sector-header .sector-name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.sector-header .change {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.sector-stats {
+    display: flex;
+    gap: 16px;
+}
+
+.sector-stats .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sector-stats .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.sector-stats .value {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* 加载和空状态 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.error {
+    text-align: center;
+    padding: 40px;
+    color: var(--danger-color);
+}
+
+/* 自选按钮 */
+.watchlist-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.watchlist-btn.btn-add {
+    background: var(--primary-color);
+    color: white;
+}
+
+.watchlist-btn.btn-add:hover {
+    background: var(--primary-hover);
+}
+
+.watchlist-btn.btn-remove {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.watchlist-btn.btn-remove:hover {
+    background: var(--danger-color);
+    color: white;
+}
+
+/* Toast 提示 */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 今日市场总结 */
+.market-summary-section {
+    background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-secondary) 100%);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.market-summary-section .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.market-summary-section .section-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ai-badge {
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.summary-content {
+    line-height: 1.8;
+    color: var(--text-primary);
+}
+
+.summary-content .loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+.summary-content .summary-text {
+    font-size: 15px;
+}
+
+.summary-content .summary-text p {
+    margin-bottom: 12px;
+}
+
+.summary-content .summary-text .highlight {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.summary-content .summary-text .positive {
+    color: var(--success-color);
+}
+
+.summary-content .summary-text .negative {
+    color: var(--danger-color);
+}
+
+.summary-content .summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.summary-content .stat-item {
+    text-align: center;
+}
+
+.summary-content .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.summary-content .stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .market-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .overview-card {
+        padding: 16px;
+    }
+    
+    .card-icon {
+        font-size: 24px;
+        margin-right: 12px;
+    }
+    
+    .tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+    
+    .stock-table {
+        font-size: 12px;
+    }
+    
+    .stock-table th,
+    .stock-table td {
+        padding: 10px 8px;
+    }
+    
+    .sector-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .watchlist-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}

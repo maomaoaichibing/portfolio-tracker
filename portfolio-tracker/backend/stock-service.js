@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const apiCache = require('./api-cache-service');
 
 // 新浪财经 API 基础 URL
 const SINA_API_URL = 'https://hq.sinajs.cn';
@@ -41,33 +42,36 @@ function convertToSinaCode(symbol) {
 }
 
 /**
- * 获取股票实时价格
+ * 获取股票实时价格（带缓存）
  * @param {string} symbol - 股票代码
  * @returns {Promise<Object>} 股票数据
  */
 async function getStockPrice(symbol) {
-    try {
-        const sinaCode = convertToSinaCode(symbol);
-        const url = `${SINA_API_URL}/list=${sinaCode}`;
-        
-        const response = await axios.get(url, {
-            headers: {
-                'Referer': 'https://finance.sina.com.cn',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            },
-            timeout: 10000,
-            responseType: 'arraybuffer' // 处理 GBK 编码
-        });
-        
-        // 转换 GBK 到 UTF-8
-        const iconv = require('iconv-lite');
-        const data = iconv.decode(response.data, 'GBK');
-        
-        return parseSinaData(symbol, data);
-    } catch (error) {
-        console.error(`获取 ${symbol} 价格失败:`, error.message);
-        return null;
-    }
+    // 使用缓存包装器
+    return apiCache.wrap('stockPrice', symbol, async () => {
+        try {
+            const sinaCode = convertToSinaCode(symbol);
+            const url = `${SINA_API_URL}/list=${sinaCode}`;
+            
+            const response = await axios.get(url, {
+                headers: {
+                    'Referer': 'https://finance.sina.com.cn',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                },
+                timeout: 10000,
+                responseType: 'arraybuffer' // 处理 GBK 编码
+            });
+            
+            // 转换 GBK 到 UTF-8
+            const iconv = require('iconv-lite');
+            const data = iconv.decode(response.data, 'GBK');
+            
+            return parseSinaData(symbol, data);
+        } catch (error) {
+            console.error(`获取 ${symbol} 价格失败:`, error.message);
+            return null;
+        }
+    });
 }
 
 /**

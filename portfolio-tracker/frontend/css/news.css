@@ -1,0 +1,230 @@
+/** 新闻监控页面样式 */
+
+/* 页面头部 */
+.page-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+}
+
+.page-header .subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+/* 新闻统计 */
+.news-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* 新闻区块 */
+.news-section {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 24px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.refresh-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: var(--border-color);
+}
+
+/* 新闻列表 */
+.news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.news-item {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border-left: 4px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.news-item:hover {
+    transform: translateX(4px);
+}
+
+.news-item.important {
+    border-left-color: var(--danger-color);
+    background: rgba(245, 34, 45, 0.05);
+}
+
+.news-item.positive {
+    border-left-color: var(--success-color);
+}
+
+.news-item.negative {
+    border-left-color: var(--danger-color);
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+
+.news-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-decoration: none;
+    flex: 1;
+    line-height: 1.5;
+}
+
+.news-title:hover {
+    color: var(--primary-color);
+}
+
+.news-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.news-badge.important {
+    background: var(--danger-color);
+    color: white;
+}
+
+.news-badge.positive {
+    background: var(--success-color);
+    color: white;
+}
+
+.news-badge.negative {
+    background: var(--danger-color);
+    color: white;
+}
+
+.news-badge.neutral {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.news-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.news-summary {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.news-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.news-stock {
+    font-size: 13px;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.news-relevance {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* 加载和空状态 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.error {
+    text-align: center;
+    padding: 40px;
+    color: var(--danger-color);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .news-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .news-header {
+        flex-direction: column;
+    }
+    
+    .news-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}

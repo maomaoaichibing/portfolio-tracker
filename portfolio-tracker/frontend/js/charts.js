@@ -213,7 +213,7 @@ function updateChangeChart() {
 
     const labels = sortedData.map(item => item.name);
     const data = sortedData.map(item => item.pnlPercent);
-    const colors = data.map(value => value >= 0 ? '#10B981' : '#EF4444');
+    const colors = data.map(value => value >= 0 ? '#FF4D4F' : '#52C41A');  // A股红涨绿跌
 
     changeChart.data.labels = labels;
     changeChart.data.datasets[0].data = data;

@@ -3,7 +3,7 @@
  */
 
 // API 基础 URL - 自动检测当前环境
-const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
+const API_BASE_URL = `${window.location.protocol}//${window.location.host}`;
 
 console.log('[DEBUG] API_BASE_URL:', API_BASE_URL);
 console.log('[DEBUG] window.location:', window.location.href);
@@ -180,7 +180,7 @@ async function uploadFiles() {
         uploadStatus.textContent = '正在上传图片...';
 
         // 调用后端 API 识别持仓
-        const response = await fetch(`${API_BASE_URL}/portfolio/upload`, {
+        const response = await fetch(`${API_BASE_URL}/api/portfolio/upload`, {
             method: 'POST',
             body: formData
         });
@@ -199,7 +199,7 @@ async function uploadFiles() {
         if (result.portfolio && result.portfolio.length > 0) {
             uploadStatus.textContent = '正在生成分析报告...';
 
-            const analyzeResponse = await fetch(`${API_BASE_URL}/portfolio/analyze`, {
+            const analyzeResponse = await fetch(`${API_BASE_URL}/api/portfolio/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ portfolio: result.portfolio })
@@ -232,8 +232,8 @@ async function uploadFiles() {
 // 加载持仓数据
 async function loadPortfolio() {
     try {
-        console.log('[DEBUG] Loading portfolio from:', `${API_BASE_URL}/portfolio`);
-        const response = await fetch(`${API_BASE_URL}/portfolio`);
+        console.log('[DEBUG] Loading portfolio from:', `${API_BASE_URL}/api/portfolio`);
+        const response = await fetch(`${API_BASE_URL}/api/portfolio`);
         console.log('[DEBUG] Response status:', response.status);
         
         if (!response.ok) {
@@ -286,8 +286,19 @@ function updateStats() {
     document.getElementById('totalValue').textContent = formatCurrency(totalValue);
 
     const pnlElement = document.getElementById('todayPnL');
-    pnlElement.textContent = formatCurrency(todayPnL);
-    pnlElement.className = `text-2xl font-bold ${todayPnL >= 0 ? 'profit' : 'loss'}`;
+    const pnlIconBg = document.getElementById('pnlIconBg');
+    const pnlIcon = document.getElementById('pnlIcon');
+    
+    // A股红涨绿跌
+    const isProfit = todayPnL >= 0;
+    pnlElement.textContent = (isProfit ? '+' : '') + formatCurrency(todayPnL);
+    pnlElement.className = `stat-value font-number ${isProfit ? 'text-rise' : 'text-fall'}`;
+    
+    // 更新图标背景色
+    if (pnlIconBg && pnlIcon) {
+        pnlIconBg.className = `p-3 rounded-lg ${isProfit ? 'bg-rise' : 'bg-fall'}`;
+        pnlIcon.className = `h-6 w-6 ${isProfit ? 'text-rise' : 'text-fall'}`;
+    }
 
     document.getElementById('monitoringCount').textContent = monitoringCount;
 }
@@ -326,8 +337,8 @@ function renderPortfolioTable() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right">
                 <div class="flex flex-col items-end">
-                    <span class="text-sm font-medium ${item.pnl >= 0 ? 'profit' : 'loss'}">${item.pnl >= 0 ? '+' : ''}${formatCurrency(item.pnl)}</span>
-                    <span class="text-xs ${item.pnl >= 0 ? 'profit' : 'loss'}">${item.pnl >= 0 ? '+' : ''}${item.pnlPercent.toFixed(2)}%</span>
+                    <span class="text-sm font-medium ${item.pnl >= 0 ? 'text-rise' : 'text-fall'}">${item.pnl >= 0 ? '+' : ''}${formatCurrency(item.pnl)}</span>
+                    <span class="text-xs ${item.pnl >= 0 ? 'text-rise' : 'text-fall'}">${item.pnl >= 0 ? '+' : ''}${item.pnlPercent.toFixed(2)}%</span>
                 </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -368,7 +379,7 @@ async function refreshPortfolio() {
 
     try {
         // 先刷新后端价格
-        const response = await fetch(`${API_BASE_URL}/portfolio/refresh-prices`, {
+        const response = await fetch(`${API_BASE_URL}/api/portfolio/refresh-prices`, {
             method: 'POST'
         });
         const result = await response.json();
@@ -576,7 +587,7 @@ async function loadAlerts() {
     if (!container) return;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/alerts?unreadOnly=true`);
+        const response = await fetch(`${API_BASE_URL}/api/alerts?unreadOnly=true`);
         const data = await response.json();
 
         if (data.alerts && data.alerts.length > 0) {
@@ -620,7 +631,7 @@ async function loadAlerts() {
 // 标记提醒为已读
 async function markAlertRead(id) {
     try {
-        await fetch(`${API_BASE_URL}/alerts/${id}/read`, {
+        await fetch(`${API_BASE_URL}/api/alerts/${id}/read`, {
             method: 'POST'
         });
         loadAlerts();
@@ -635,7 +646,7 @@ async function checkMonitoring() {
     showToast('正在检查监控指标...');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/monitoring/check`, {
+        const response = await fetch(`${API_BASE_URL}/api/monitoring/check`, {
             method: 'POST'
         });
         const result = await response.json();
@@ -657,7 +668,7 @@ async function sendDailyReport() {
     showToast('正在生成并发送日报...');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/feishu/daily-report`, {
+        const response = await fetch(`${API_BASE_URL}/api/feishu/daily-report`, {
             method: 'POST'
         });
         const result = await response.json();
@@ -728,7 +739,7 @@ async function createPriceAlert() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/price-alerts`, {
+        const response = await fetch(`${API_BASE_URL}/api/price-alerts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbol, alertType, targetPrice })
@@ -752,7 +763,7 @@ async function createPriceAlert() {
 // 加载价格预警列表
 async function loadPriceAlerts() {
     try {
-        const response = await fetch(`${API_BASE_URL}/price-alerts`);
+        const response = await fetch(`${API_BASE_URL}/api/price-alerts`);
         const data = await response.json();
 
         // 更新提醒面板显示价格预警
@@ -799,7 +810,7 @@ async function deletePriceAlert(id) {
     if (!confirm('确定要删除这个预警吗？')) return;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/price-alerts/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/price-alerts/${id}`, {
             method: 'DELETE'
         });
 
@@ -844,14 +855,14 @@ async function loadAllNews() {
 
     try {
         // 获取重要新闻
-        const response = await fetch(`${API_BASE_URL}/news?importantOnly=true&limit=50`);
+        const response = await fetch(`${API_BASE_URL}/api/news?importantOnly=true&limit=50`);
         const data = await response.json();
 
         if (data.news && data.news.length > 0) {
             renderNewsList(data.news);
         } else {
             // 如果没有重要新闻，获取所有新闻
-            const allResponse = await fetch(`${API_BASE_URL}/news?limit=30`);
+            const allResponse = await fetch(`${API_BASE_URL}/api/news?limit=30`);
             const allData = await allResponse.json();
 
             if (allData.news && allData.news.length > 0) {
@@ -978,7 +989,7 @@ async function refreshNews() {
     `;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/news/refresh`, {
+        const response = await fetch(`${API_BASE_URL}/api/news/refresh`, {
             method: 'POST'
         });
 
@@ -999,7 +1010,7 @@ async function refreshNews() {
 // 加载单只股票的新闻
 async function loadStockNews(symbol) {
     try {
-        const response = await fetch(`${API_BASE_URL}/news/${symbol}?limit=10`);
+        const response = await fetch(`${API_BASE_URL}/api/news/${symbol}?limit=10`);
         const data = await response.json();
 
         return data.news || [];

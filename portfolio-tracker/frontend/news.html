@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻监控 - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/news.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">我的持仓</a>
+                <a href="monitor.html">AI监控</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="agent.html">🤖 AI Agent</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h2>📰 新闻监控</h2>
+            <p class="subtitle">追踪持仓相关新闻，把握市场动态</p>
+        </div>
+
+        <!-- 新闻统计 -->
+        <div class="news-stats" id="newsStats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalNews">--</div>
+                <div class="stat-label">总新闻数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="importantNews">--</div>
+                <div class="stat-label">重要新闻</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="positiveNews">--</div>
+                <div class="stat-label">正面</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="negativeNews">--</div>
+                <div class="stat-label">负面</div>
+            </div>
+        </div>
+
+        <!-- 新闻列表 -->
+        <div class="news-section">
+            <div class="section-header">
+                <h3>🔥 持仓相关新闻</h3>
+                <button class="refresh-btn" onclick="loadNews()">🔄 刷新</button>
+            </div>
+            
+            <div class="news-list" id="newsList">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/news.js"></script>
+</body>
+</html>

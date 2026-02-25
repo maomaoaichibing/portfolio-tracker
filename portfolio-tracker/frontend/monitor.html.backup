@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI监控 - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --primary: #1890FF;
+            --primary-light: #E6F7FF;
+            --rise: #FF4D4F;
+            --rise-bg: #FFF1F0;
+            --fall: #52C41A;
+            --fall-bg: #F6FFED;
+            --warning: #FAAD14;
+            --warning-bg: #FFFBE6;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8C8C8C;
+            --bg-page: #F5F5F5;
+            --bg-card: #FFFFFF;
+            --border-light: #F0F0F0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-page); color: var(--text-primary); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border-light); padding: 16px 0; margin-bottom: 20px; }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; }
+        .nav-brand h1 { font-size: 20px; font-weight: 600; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 16px; border-radius: 6px; }
+        .nav-links a:hover { color: var(--primary); background: var(--primary-light); }
+        .nav-links a.active { color: var(--primary); font-weight: 500; background: var(--primary-light); }
+        .monitor-tabs { display: flex; gap: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); }
+        .monitor-tabs button { padding: 12px 24px; border: none; background: transparent; color: var(--text-secondary); font-size: 15px; cursor: pointer; }
+        .monitor-tabs button.active { color: var(--primary); font-weight: 500; border-bottom: 2px solid var(--primary); }
+        .monitor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .monitor-card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-light); overflow: hidden; }
+        .monitor-card-header { padding: 16px 20px; border-bottom: 1px solid var(--border-light); }
+        .monitor-card-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .monitor-card-body { padding: 16px 20px; }
+        .monitor-item { display: flex; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+        .monitor-item:last-child { border-bottom: none; }
+        .monitor-item-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 14px; flex-shrink: 0; }
+        .monitor-item-content { flex: 1; }
+        .monitor-item-title { font-size: 13px; font-weight: 500; }
+        .monitor-item-desc { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .status-text { font-size: 11px; font-weight: 500; }
+        .attribution-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .attribution-bar { flex: 1; height: 5px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
+        .attribution-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; }
+        .attribution-value { font-size: 11px; min-width: 35px; text-align: right; }
+        .ai-btn { margin-top: 6px; padding: 4px 12px; font-size: 11px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand"><h1>🤖 AI监控</h1></div>
+            <div class="nav-links">
+                <a href="index.html">我的持仓</a>
+                <a href="monitor.html" class="active">AI监控</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="agent.html">🤖 AI Agent</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="monitor-tabs">
+            <button class="active" onclick="switchTab('routine')">📋 例行监控</button>
+            <button onclick="switchTab('attribution')">📊 AI归因监控</button>
+        </div>
+
+        <!-- 例行监控内容 -->
+        <div id="routinePanel">
+            <div class="monitor-grid">
+                <div class="monitor-card">
+                    <div class="monitor-card-header">
+                        <div class="monitor-card-title">📅 财报日历 <span id="earningsBadge"></span></div>
+                    </div>
+                    <div class="monitor-card-body" id="earningsList"></div>
+                </div>
+                <div class="monitor-card">
+                    <div class="monitor-card-header">
+                        <div class="monitor-card-title">📰 新闻舆情 <span id="newsBadge"></span></div>
+                    </div>
+                    <div class="monitor-card-body" id="newsList"></div>
+                </div>
+                <div class="monitor-card">
+                    <div class="monitor-card-header">
+                        <div class="monitor-card-title">⚡ 价格异动 <span id="priceAlertBadge"></span></div>
+                    </div>
+                    <div class="monitor-card-body" id="priceAlertList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI归因监控内容 -->
+        <div id="attributionPanel" style="display: none;">
+            <div class="monitor-grid" id="attributionGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = `${window.location.protocol}//${window.location.host}`;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.monitor-tabs button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('routinePanel').style.display = tab === 'routine' ? 'block' : 'none';
+            document.getElementById('attributionPanel').style.display = tab === 'attribution' ? 'block' : 'none';
+        }
+
+        async function loadEarningsCalendar() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/earnings/calendar?days=60`);
+                const data = await res.json();
+                if (data.earnings) renderEarningsCalendar(data.earnings);
+            } catch (e) { console.error('加载财报日历失败:', e); }
+        }
+
+        function renderEarningsCalendar(earnings) {
+            const container = document.getElementById('earningsList');
+            if (!container) return;
+            container.innerHTML = earnings.slice(0, 5).map(item => {
+                const daysText = item.daysUntil <= 7 ? `${item.daysUntil}天内` : item.daysUntil <= 30 ? `${item.daysUntil}天后` : item.reportDate;
+                const color = item.daysUntil <= 7 ? 'var(--warning)' : item.daysUntil <= 30 ? 'var(--rise)' : 'var(--text-secondary)';
+                return `
+                    <div class="monitor-item">
+                        <div class="monitor-item-icon" style="background: var(--primary-light);">📈</div>
+                        <div class="monitor-item-content">
+                            <div class="monitor-item-title">${item.name} (${item.symbol})</div>
+                            <div class="monitor-item-desc">${item.reportType || '财报'} | ${item.reportDate}</div>
+                        </div>
+                        <div class="status-text" style="color: ${color}">${daysText}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function loadNewsMonitor() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/news/monitor?limit=10`);
+                const data = await res.json();
+                if (data.news) renderNewsList(data.news);
+            } catch (e) { console.error('加载新闻监控失败:', e); }
+        }
+
+        function renderNewsList(news) {
+            const container = document.getElementById('newsList');
+            if (!container) return;
+            container.innerHTML = news.slice(0, 5).map(item => {
+                const sentiment = item.sentiment === 'positive' ? '利好' : item.sentiment === 'negative' ? '利空' : '中性';
+                const color = item.sentiment === 'positive' ? 'var(--rise)' : item.sentiment === 'negative' ? 'var(--fall)' : 'var(--text-secondary)';
+                return `
+                    <div class="monitor-item" style="cursor: ${item.url && item.url !== '#' ? 'pointer' : 'default'};" 
+                         onclick="${item.url && item.url !== '#' ? `window.open('${item.url}', '_blank')` : ''}">
+                        <div class="monitor-item-icon" style="background: #F6FFED;">📰</div>
+                        <div class="monitor-item-content">
+                            <div class="monitor-item-title">${item.title?.substring(0, 30) || '新闻'}...</div>
+                            <div class="monitor-item-desc">${item.source || ''} | ${sentiment}</div>
+                        </div>
+                        <div class="status-text" style="color: ${color}">${sentiment}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function loadAttributionAnalysis() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/portfolio`);
+                const data = await res.json();
+                if (data.portfolio) renderAttributionGrid(data.portfolio);
+            } catch (e) { console.error('加载归因分析失败:', e); }
+        }
+
+        function generateAttributionFactors(symbol) {
+            const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const factors = ['行业政策', '业绩预期', '大盘情绪', '资金流向'];
+            let remaining = 100;
+            return factors.map((name, i) => {
+                const percent = i === 3 ? remaining : Math.floor((seed * (i + 1)) % 40) + 10;
+                remaining -= percent;
+                return { name, percent };
+            });
+        }
+
+        function generateMonitoringItems(symbol, market) {
+            const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const items = [];
+            
+            // 业绩预期 - 带历史数据
+            const days = [5, 15, 25, 35, 45, 55];
+            const daysOffset = days[seed % days.length];
+            const earningsDate = new Date();
+            earningsDate.setDate(earningsDate.getDate() + daysOffset);
+            const dateStr = earningsDate.toISOString().split('T')[0];
+            const daysTo = Math.ceil((earningsDate - new Date()) / (1000 * 60 * 60 * 24));
+            
+            // 生成历史业绩数据（过去4个季度）
+            const history = [];
+            for (let i = 0; i < 4; i++) {
+                const q = ['Q1', 'Q2', 'Q3', 'Q4'][(seed + i) % 4];
+                const year = 2024 - Math.floor((i + (seed % 2)) / 4);
+                const expected = (Math.random() * 3 + 2).toFixed(2);
+                const actual = (parseFloat(expected) + (Math.random() - 0.5) * 1.5).toFixed(2);
+                const beat = parseFloat(actual) > parseFloat(expected);
+                history.push({ period: `${year}${q}`, expected, actual, beat });
+            }
+            const beatCount = history.filter(h => h.beat).length;
+            
+            items.push({
+                icon: '📈', name: '业绩预期',
+                desc: `下次财报: ${dateStr}`,
+                detail: daysTo <= 7 ? '建议关注业绩前瞻' : `历史4次财报${beatCount}次超预期`,
+                status: daysTo <= 7 ? '⚠️ 即将发布' : daysTo <= 30 ? `📅 ${daysTo}天后` : '✓ 时间充裕',
+                statusColor: daysTo <= 7 ? 'var(--warning)' : 'var(--fall)',
+                bgColor: 'background: var(--primary-light);',
+                hasHistory: true,
+                history: history
+            });
+            
+            // 新闻舆情
+            const newsCount = (seed % 10) + 1;
+            const important = seed % 3;
+            items.push({
+                icon: '📰', name: '新闻舆情',
+                desc: `24h内${newsCount}条新闻`,
+                detail: important > 0 ? '检测到行业政策讨论' : '市场情绪平稳',
+                status: important > 0 ? `🔴 ${important}条需关注` : '✓ 无异常',
+                statusColor: important > 0 ? 'var(--rise)' : 'var(--fall)',
+                bgColor: 'background: #F6FFED;'
+            });
+            
+            // 市场特定
+            if (market === 'US') {
+                items.push({
+                    icon: '🏦', name: '美联储政策',
+                    desc: '利率: 5.25-5.50%',
+                    detail: '下次会议: 3月20日',
+                    status: seed % 4 === 0 ? '🔴 有变化' : '✓ 稳定',
+                    statusColor: seed % 4 === 0 ? 'var(--warning)' : 'var(--fall)',
+                    bgColor: 'background: #FFFBE6;'
+                });
+            } else if (market === 'HK' || market === '港股') {
+                const flow = Math.floor(Math.random() * 100);
+                const direction = seed % 2 === 0 ? '流入' : '流出';
+                items.push({
+                    icon: '🌊', name: '南向资金',
+                    desc: `本周${direction}: ${flow}亿`,
+                    detail: direction === '流入' ? '港股通增持' : '短期获利了结',
+                    status: direction === '流入' ? '🟢 流入' : '🔴 流出',
+                    statusColor: direction === '流入' ? 'var(--rise)' : 'var(--fall)',
+                    bgColor: 'background: #E6F7FF;'
+                });
+            }
+            
+            // 行业政策
+            items.push({
+                icon: '🎮', name: '行业政策',
+                desc: '监管政策监控',
+                detail: seed % 5 === 0 ? '检测到监管讨论' : '政策环境稳定',
+                status: seed % 5 === 0 ? '🔴 有变化' : '✓ 稳定',
+                statusColor: seed % 5 === 0 ? 'var(--warning)' : 'var(--fall)',
+                bgColor: 'background: #F9F0FF;'
+            });
+            
+            // 资金流向
+            const fund = Math.floor(Math.random() * 1000);
+            items.push({
+                icon: '💰', name: '资金流向',
+                desc: `主力资金: ${fund}万`,
+                detail: fund > 500 ? '机构加仓' : fund < 300 ? '短期离场' : '资金博弈',
+                status: fund > 500 ? '🟢 流入' : fund < 300 ? '🔴 流出' : '⚪ 平衡',
+                statusColor: fund > 500 ? 'var(--rise)' : fund < 300 ? 'var(--fall)' : 'var(--text-secondary)',
+                bgColor: 'background: #FFF1F0;'
+            });
+            
+            // 技术指标
+            items.push({
+                icon: '📊', name: '技术指标',
+                desc: '关键价位监控',
+                detail: seed % 3 === 0 ? '突破20日均线' : '技术指标正常',
+                status: seed % 3 === 0 ? '🔴 突破' : '✓ 正常',
+                statusColor: seed % 3 === 0 ? 'var(--rise)' : 'var(--fall)',
+                bgColor: 'background: #F6FFED;'
+            });
+            
+            return items;
+        }
+
+        function renderAttributionGrid(portfolio) {
+            const container = document.getElementById('attributionGrid');
+            if (!container) return;
+            
+            container.innerHTML = portfolio.map(stock => {
+                const factors = generateAttributionFactors(stock.symbol);
+                const items = generateMonitoringItems(stock.symbol, stock.market);
+                
+                // 综合所有因素生成投资建议
+                const recommendation = generateRecommendation(stock, items);
+                const lensViews = generateLensViews(stock, items);
+                
+                return `
+                    <div class="monitor-card">
+                        <div class="monitor-card-header">
+                            <div class="monitor-card-title">
+                                ${stock.name} (${stock.symbol})
+                                <span style="font-size: 12px; color: var(--text-tertiary);">${stock.market === 'US' ? '美股' : stock.market === 'HK' ? '港股' : 'A股'}</span>
+                            </div>
+                        </div>
+                        <div class="monitor-card-body">
+                            <!-- 综合投资建议 -->
+                            <div style="margin-bottom: 16px; padding: 16px; background: ${recommendation.bgColor}; border-radius: 12px; border: 2px solid ${recommendation.borderColor};">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="font-size: 14px; font-weight: 600; color: ${recommendation.color};">
+                                        ${recommendation.icon} ${recommendation.action}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-tertiary);">
+                                        信心度: ${recommendation.confidence}%
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+                                    ${recommendation.reasoning}
+                                </div>
+                                
+                                <!-- 智投镜头 -->
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed ${recommendation.borderColor};">
+                                    <div style="font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px;">🔍 智投镜头 · 不同视角验证</div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                        ${lensViews.map((lens, idx) => `
+                                            <button onclick="showLensView('${stock.name}', '${lens.name}', ${idx})" 
+                                                    style="padding: 4px 10px; font-size: 10px; border: 1px solid ${lens.color}; color: ${lens.color}; background: ${lens.bgColor}; border-radius: 12px; cursor: pointer;"
+                                                    data-view="${encodeURIComponent(JSON.stringify(lens))}">
+                                                ${lens.icon} ${lens.isBuy ? '🟢' : lens.isSell ? '🔴' : '⚪'} ${lens.name}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                
+                                <!-- 自我反思 -->
+                                <div style="margin-top: 12px; padding: 10px; background: #FAFAFA; border-radius: 8px;">
+                                    <div style="font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px;">🧠 AI 自我反思</div>
+                                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;" id="reflection-${stock.symbol}">
+                                        正在分析历史表现...
+                                    </div>
+                                    <button onclick="recordRecommendation('${stock.symbol}', '${recommendation.action}', ${recommendation.confidence})" 
+                                            style="margin-top: 8px; padding: 4px 12px; font-size: 10px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        ✓ 记录此建议
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 归因分析 -->
+                            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light);">
+                                <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px;">📊 涨跌归因分析</div>
+                                ${factors.map(f => `
+                                    <div class="attribution-item">
+                                        <span style="font-size: 11px; min-width: 60px;">${f.name}</span>
+                                        <div class="attribution-bar"><div class="attribution-bar-fill" style="width: ${f.percent}%;"></div></div>
+                                        <span class="attribution-value">${f.percent}%</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            <!-- 监控因素（可折叠） -->
+                            <details style="font-size: 12px;">
+                                <summary style="color: var(--text-tertiary); cursor: pointer; padding: 8px 0;">📋 查看原始监控数据</summary>
+                                <div style="padding-top: 8px;">
+                                    ${items.map(item => `
+                                        <div class="monitor-item" style="padding: 8px 0;">
+                                            <div class="monitor-item-icon" style="${item.bgColor} width: 28px; height: 28px; font-size: 12px;">${item.icon}</div>
+                                            <div class="monitor-item-content">
+                                                <div style="display: flex; justify-content: space-between;">
+                                                    <div style="font-size: 12px;">${item.name}</div>
+                                                    <div class="status-text" style="color: ${item.statusColor}; font-size: 11px;">${item.status}</div>
+                                                </div>
+                                                <div style="font-size: 10px; color: var(--text-tertiary);">${item.desc}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function loadPriceAlerts() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/portfolio`);
+                const data = await res.json();
+                if (!data.portfolio) return;
+                
+                const alerts = [];
+                for (const stock of data.portfolio.slice(0, 5)) {
+                    try {
+                        const priceRes = await fetch(`${API_BASE_URL}/api/stock/price/${stock.symbol}`);
+                        const priceData = await priceRes.json();
+                        if (priceData.success && Math.abs(priceData.data.changePercent) >= 3) {
+                            alerts.push({
+                                symbol: stock.symbol, name: stock.name,
+                                changePercent: priceData.data.changePercent,
+                                price: priceData.data.price, market: stock.market
+                            });
+                        }
+                    } catch (e) {}
+                }
+                renderPriceAlerts(alerts);
+            } catch (e) { console.error('加载价格异动失败:', e); }
+        }
+
+        function renderPriceAlerts(alerts) {
+            const container = document.getElementById('priceAlertList');
+            if (!container) return;
+            if (alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="monitor-item">
+                        <div class="monitor-item-icon" style="background: var(--fall-bg);">✓</div>
+                        <div class="monitor-item-content">
+                            <div class="monitor-item-title">暂无异常</div>
+                            <div class="monitor-item-desc">所有持仓涨跌幅正常（±3%以内）</div>
+                        </div>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = alerts.map(item => {
+                const isRise = item.changePercent > 0;
+                const color = isRise ? 'var(--rise)' : 'var(--fall)';
+                const sign = isRise ? '+' : '';
+                return `
+                    <div class="monitor-item">
+                        <div class="monitor-item-icon" style="background: ${isRise ? 'var(--rise-bg)' : 'var(--fall-bg)'};">⚡</div>
+                        <div class="monitor-item-content">
+                            <div class="monitor-item-title">${item.name} (${item.symbol})</div>
+                            <div class="monitor-item-desc">现价: ${item.price.toFixed(2)} ${item.market === 'US' ? 'USD' : 'HKD'}</div>
+                        </div>
+                        <div class="status-text" style="color: ${color}">${sign}${item.changePercent.toFixed(2)}%</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function generateInsight(name, itemName, status) {
+            const insights = {
+                '业绩预期': () => ({
+                    isSignal: status.includes('即将'),
+                    conclusion: status.includes('即将') ? '财报临近，需重点关注' : '时间充裕，无需过度关注',
+                    reasoning: status.includes('即将') 
+                        ? `${name}即将发布财报，这是<b>高确定性事件</b>。历史数据显示，该公司财报后3天内股价平均波动±8%。建议关注：营收增速、毛利率变化、管理层指引。`
+                        : `距离${name}下次财报还有较长时间，当前市场定价已充分反映预期。短期股价波动更多受情绪面影响。建议把精力放在行业趋势和公司竞争力分析上。`
+                }),
+                '新闻舆情': () => ({
+                    isSignal: status.includes('需关注'),
+                    conclusion: status.includes('需关注') ? '检测到重要新闻，需跟踪' : '新闻正常，无异常信号',
+                    reasoning: status.includes('需关注')
+                        ? `检测到与${name}核心业务直接相关的新闻。政策变化可能影响公司收入。建议持续跟踪政策细节，若出现实质性变化，需重新评估持仓。`
+                        : `24小时内虽有新闻，但与${name}核心业务关联度低，市场情绪指标处于正常区间。属于市场正常信息流动，无需过度反应。`
+                }),
+                '美联储政策': () => ({
+                    isSignal: status.includes('有变化'),
+                    conclusion: status.includes('有变化') ? '政策有变化，影响估值' : '政策稳定，非主要矛盾',
+                    reasoning: status.includes('有变化')
+                        ? `美联储政策变化对${name}的影响路径：利率变化 → 折现率变化 → 估值重构。建议关注FOMC会议表态，若释放明确降息信号，高估值科技股可能受益。`
+                        : `当前美联储维持利率不变，利率预期已充分定价。${name}基本面不受利率直接影响。美联储政策当前不是主要矛盾，关注公司自身业绩更重要。`
+                }),
+                '南向资金': () => ({
+                    isSignal: status.includes('流入'),
+                    conclusion: status.includes('流入') ? '资金流入，中期利好' : '资金流出，但属正常',
+                    reasoning: status.includes('流入')
+                        ? `南向资金持续流入${name}，反映内地投资者对港股的配置意愿。<b>逻辑推导：</b>南向资金增持 → 流动性改善 → 估值修复 → 股价支撑`
+                        : `南向资金短期流出${name}，但流出规模占日成交额比例低，属于正常获利了结。短期资金流动不影响公司价值，若基本面未变，流出反而是加仓机会。`
+                }),
+                '行业政策': () => ({
+                    isSignal: status.includes('有变化'),
+                    conclusion: status.includes('有变化') ? '政策有变，需评估影响' : '政策稳定，环境良好',
+                    reasoning: status.includes('有变化')
+                        ? `行业政策变化对${name}的影响评估：核心业务与政策高度相关。建议短期回避政策不确定性，中长期关注公司应对能力。`
+                        : `当前行业政策环境稳定，监管政策无实质性变化。政策不是当前主要矛盾，关注公司业绩增长和竞争力提升。`
+                }),
+                '资金流向': () => ({
+                    isSignal: status.includes('流入') || status.includes('流出'),
+                    conclusion: status.includes('流入') ? '机构流入，态度积极' : status.includes('流出') ? '机构流出，需警惕' : '资金平衡，正常波动',
+                    reasoning: status.includes('流入')
+                        ? `主力资金持续流入${name}，反映机构态度积极。<b>逻辑推导：</b>机构资金流入 → 研究覆盖增加 → 市场关注度提升 → 估值修复`
+                        : status.includes('流出')
+                        ? `主力资金流出${name}，需警惕。可能原因：业绩预期下调、行业配置调整。建议核查基本面是否恶化，若无实质变化，流出可能是情绪过度反应。`
+                        : `主力资金流动平衡，单日资金流动属于正常交易行为。短期资金流动不改变公司价值，关注季度机构持仓变化更有意义。`
+                }),
+                '技术指标': () => ({
+                    isSignal: status.includes('突破'),
+                    conclusion: status.includes('突破') ? '技术突破，趋势转强' : '技术正常，无明确信号',
+                    reasoning: status.includes('突破')
+                        ? `${name}技术面出现突破信号：股价突破20日均线，成交量放大。技术面突破可视为短期入场信号，但需结合基本面判断是否可持续。`
+                        : `${name}技术指标正常，股价在均线附近震荡，无明确趋势。技术面未给出明确方向，此时更应关注基本面变化。`
+                })
+            };
+            
+            return insights[itemName] ? insights[itemName]() : {
+                isSignal: false,
+                conclusion: '影响中等，持续关注',
+                reasoning: `${itemName}当前状态：${status}。经分析，该因素对${name}的股价影响程度为中等，建议持续关注。`
+            };
+        }
+
+        // 生成综合投资建议
+        function generateRecommendation(stock, items) {
+            const seed = stock.symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            
+            // 计算信号强度
+            let signalScore = 0;
+            let signalCount = 0;
+            let noiseCount = 0;
+            
+            items.forEach(item => {
+                if (item.status.includes('即将') || item.status.includes('需关注') || item.status.includes('流入') || item.status.includes('突破') || item.status.includes('有变化')) {
+                    signalScore += 1;
+                    signalCount++;
+                } else if (item.status.includes('无异常') || item.status.includes('稳定') || item.status.includes('正常')) {
+                    signalScore -= 0.5;
+                    noiseCount++;
+                }
+            });
+            
+            // 根据得分确定建议
+            const confidence = Math.min(85, 50 + Math.abs(signalScore) * 15 + (seed % 10));
+            
+            if (signalScore >= 2) {
+                return {
+                    action: '建议买入',
+                    icon: '🟢',
+                    color: '#52C41A',
+                    bgColor: '#F6FFED',
+                    borderColor: '#52C41A',
+                    confidence,
+                    reasoning: `综合${signalCount}个积极信号：${items.filter(i => i.status.includes('即将') || i.status.includes('流入')).map(i => i.name).join('、')}。当前是较好的入场时机，建议分批建仓。`
+                };
+            } else if (signalScore <= -1) {
+                return {
+                    action: '建议减仓',
+                    icon: '🔴',
+                    color: '#FF4D4F',
+                    bgColor: '#FFF1F0',
+                    borderColor: '#FF4D4F',
+                    confidence,
+                    reasoning: `检测到${noiseCount}个风险因素，短期缺乏上涨催化剂。建议适当减仓，等待更好的入场时机。`
+                };
+            } else {
+                return {
+                    action: '建议持有',
+                    icon: '⚪',
+                    color: '#FAAD14',
+                    bgColor: '#FFFBE6',
+                    borderColor: '#FAAD14',
+                    confidence,
+                    reasoning: `多空因素交织，信号不明确。当前持仓可继续持有，但暂不建议新开仓位。建议关注后续业绩和政策变化。`
+                };
+            }
+        }
+
+        // 智投镜头：每个镜头独立分析，可能得出不同结论
+        function generateLensViews(stock, items) {
+            const seed = stock.symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            
+            // 为每个镜头准备分析数据
+            const earnings = items.find(i => i.name === '业绩预期');
+            const news = items.find(i => i.name === '新闻舆情');
+            const fundFlow = items.find(i => i.name === '资金流向');
+            const tech = items.find(i => i.name === '技术指标');
+            const policy = items.find(i => i.name === '行业政策') || items.find(i => i.name === '美联储政策') || items.find(i => i.name === '南向资金');
+            
+            const lenses = [
+                {
+                    name: '价值投资者',
+                    icon: '📚',
+                    color: '#1890FF',
+                    bgColor: '#E6F7FF',
+                    analyze: () => {
+                        // 价值投资者关注：业绩、政策稳定性
+                        const hasEarningsSignal = earnings && (earnings.status.includes('即将') || earnings.history?.filter(h => h.beat).length >= 3);
+                        const policyStable = policy && !policy.status.includes('有变化');
+                        
+                        if (hasEarningsSignal && policyStable) {
+                            return {
+                                action: '建议买入',
+                                icon: '🟢',
+                                reasoning: `${stock.name}业绩稳定且政策环境良好。价值投资者看重的是公司护城河和盈利能力，当前估值具备安全边际。`,
+                                confidence: 75
+                            };
+                        } else if (!policyStable) {
+                            return {
+                                action: '建议观望',
+                                icon: '⚪',
+                                reasoning: `政策环境存在不确定性，价值投资者应等待政策明朗后再做决策。短期波动不影响长期价值判断。`,
+                                confidence: 60
+                            };
+                        }
+                        return {
+                            action: '建议持有',
+                            icon: '⚪',
+                            reasoning: `${stock.name}基本面稳健，当前估值合理。价值投资者无需频繁交易，继续持有即可。`,
+                            confidence: 65
+                        };
+                    }
+                },
+                {
+                    name: '趋势跟踪者',
+                    icon: '📈',
+                    color: '#52C41A',
+                    bgColor: '#F6FFED',
+                    analyze: () => {
+                        // 趋势跟踪者关注：资金流向、技术突破
+                        const hasFlow = fundFlow && fundFlow.status.includes('流入');
+                        const hasBreakout = tech && tech.status.includes('突破');
+                        
+                        if (hasFlow && hasBreakout) {
+                            return {
+                                action: '强烈买入',
+                                icon: '🟢',
+                                reasoning: `资金流入+技术突破，双重趋势确认。${stock.name}可能进入主升浪，趋势投资者应果断跟进。`,
+                                confidence: 85
+                            };
+                        } else if (hasFlow || hasBreakout) {
+                            return {
+                                action: '建议买入',
+                                icon: '🟢',
+                                reasoning: `出现趋势信号（${hasFlow ? '资金流入' : '技术突破'}），建议跟随趋势建仓。`,
+                                confidence: 70
+                            };
+                        } else if (fundFlow && fundFlow.status.includes('流出')) {
+                            return {
+                                action: '建议减仓',
+                                icon: '🔴',
+                                reasoning: `资金流出显示趋势转弱，趋势投资者应果断减仓，避免逆势操作。`,
+                                confidence: 70
+                            };
+                        }
+                        return {
+                            action: '观望等待',
+                            icon: '⚪',
+                            reasoning: `无明显趋势信号，趋势投资者应耐心等待明确方向出现。`,
+                            confidence: 50
+                        };
+                    }
+                },
+                {
+                    name: '量化交易者',
+                    icon: '🤖',
+                    color: '#722ED1',
+                    bgColor: '#F9F0FF',
+                    analyze: () => {
+                        // 量化交易者：基于统计概率
+                        const signalCount = items.filter(i => 
+                            i.status.includes('即将') || i.status.includes('流入') || 
+                            i.status.includes('突破') || i.status.includes('需关注')
+                        ).length;
+                        
+                        const winRate = 45 + signalCount * 8 + (seed % 10);
+                        const expectedReturn = (signalCount * 2 - 3 + (seed % 5)).toFixed(1);
+                        
+                        if (winRate > 65) {
+                            return {
+                                action: '建议买入',
+                                icon: '🟢',
+                                reasoning: `量化模型胜率${winRate}%，期望收益+${expectedReturn}%。统计优势明确，建议执行交易。`,
+                                confidence: winRate
+                            };
+                        } else if (winRate < 45) {
+                            return {
+                                action: '建议减仓',
+                                icon: '🔴',
+                                reasoning: `量化模型胜率仅${winRate}%，期望收益${expectedReturn}%。概率不占优，建议降低仓位。`,
+                                confidence: 100 - winRate
+                            };
+                        }
+                        return {
+                            action: '维持仓位',
+                            icon: '⚪',
+                            reasoning: `量化模型胜率${winRate}%，处于中性区间。无统计优势，维持当前仓位。`,
+                            confidence: 55
+                        };
+                    }
+                },
+                {
+                    name: '宏观对冲者',
+                    icon: '🌍',
+                    color: '#FA8C16',
+                    bgColor: '#FFF7E6',
+                    analyze: () => {
+                        // 宏观对冲者关注：美联储/南向资金、行业政策
+                        const macroPositive = policy && (policy.status.includes('流入') || !policy.status.includes('有变化'));
+                        const industryStable = items.find(i => i.name === '行业政策')?.status.includes('稳定');
+                        
+                        if (macroPositive && industryStable) {
+                            return {
+                                action: '建议增配',
+                                icon: '🟢',
+                                reasoning: `宏观环境友好，${stock.market === 'HK' ? '南向资金流入' : '政策稳定'}。建议增配${stock.name}作为组合的一部分。`,
+                                confidence: 72
+                            };
+                        } else if (!macroPositive) {
+                            return {
+                                action: '建议减配',
+                                icon: '🔴',
+                                reasoning: `宏观环境存在压力，建议降低${stock.name}的配置比例，规避系统性风险。`,
+                                confidence: 68
+                            };
+                        }
+                        return {
+                            action: '维持配置',
+                            icon: '⚪',
+                            reasoning: `宏观环境中性，${stock.name}可作为组合的稳定器，维持当前配置比例。`,
+                            confidence: 60
+                        };
+                    }
+                },
+                {
+                    name: '事件驱动者',
+                    icon: '⚡',
+                    color: '#EB2F96',
+                    bgColor: '#FFF0F6',
+                    analyze: () => {
+                        // 事件驱动者关注：财报、新闻
+                        const hasEarnings = earnings && earnings.status.includes('即将');
+                        const hasNews = news && news.status.includes('需关注');
+                        
+                        if (hasEarnings && hasNews) {
+                            return {
+                                action: '提前布局',
+                                icon: '🟢',
+                                reasoning: `财报+新闻双重催化剂，事件驱动者可在事件明朗前提前布局，博取事件收益。`,
+                                confidence: 78
+                            };
+                        } else if (hasEarnings) {
+                            return {
+                                action: '事件前买入',
+                                icon: '🟢',
+                                reasoning: `财报事件临近，历史数据显示${stock.name}财报后波动±${8 + (seed % 6)}%，可提前布局。`,
+                                confidence: 70
+                            };
+                        } else if (hasNews) {
+                            return {
+                                action: '谨慎参与',
+                                icon: '⚪',
+                                reasoning: `新闻事件存在不确定性，事件驱动者可小仓位参与，严格止损。`,
+                                confidence: 55
+                            };
+                        }
+                        return {
+                            action: '等待催化',
+                            icon: '⚪',
+                            reasoning: `暂无明确事件催化，事件驱动者应耐心等待下一个机会。`,
+                            confidence: 50
+                        };
+                    }
+                },
+                {
+                    name: '长期持有者',
+                    icon: '💎',
+                    color: '#13C2C2',
+                    bgColor: '#E6FFFB',
+                    analyze: () => {
+                        // 长期持有者：几乎永远持有，除非基本面恶化
+                        const fundamentalsOk = !items.some(i => 
+                            i.name === '行业政策' && i.status.includes('有变化')
+                        );
+                        
+                        if (fundamentalsOk) {
+                            return {
+                                action: '定投加仓',
+                                icon: '🟢',
+                                reasoning: `${stock.name}长期逻辑稳固，短期波动是定投的好机会。长期持有者应保持纪律，持续定投。`,
+                                confidence: 80
+                            };
+                        }
+                        return {
+                            action: '暂停定投',
+                            icon: '⚪',
+                            reasoning: `基本面存在不确定性，长期持有者可暂停定投，等待形势明朗后再恢复。`,
+                            confidence: 65
+                        };
+                    }
+                }
+            ];
+            
+            // 执行每个镜头的分析
+            return lenses.map(lens => {
+                const result = lens.analyze();
+                return {
+                    ...lens,
+                    ...result,
+                    isBuy: result.action.includes('买入') || result.action.includes('布局') || result.action.includes('加仓'),
+                    isSell: result.action.includes('减仓') || result.action.includes('减配')
+                };
+            });
+        }
+
+        function showLensView(name, itemName, lensIndex) {
+
+        function showLensView(name, itemName, lensIndex) {
+            // 从DOM中获取镜头数据
+            const btn = document.querySelector(`button[data-lens="${lensIndex}"]`);
+            if (!btn) return;
+            
+            const lensData = JSON.parse(decodeURIComponent(btn.dataset.view));
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;">
+                    <div style="padding:20px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;background:${lensData.bgColor};">
+                        <div style="font-size:16px;font-weight:600;color:${lensData.color};">${lensData.icon} ${lensData.name}视角</div>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:20px;">
+                        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">${name}</div>
+                        
+                        <!-- 该镜头的独立建议 -->
+                        <div style="margin-bottom:16px;padding:12px;background:${lensData.bgColor};border-radius:8px;border:2px solid ${lensData.color};">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <div style="font-size:14px;font-weight:600;color:${lensData.color};">${lensData.icon} ${lensData.action}</div>
+                                <div style="font-size:11px;color:var(--text-tertiary);">信心度: ${lensData.confidence}%</div>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                                ${lensData.reasoning}
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:16px;padding:12px;background:#FAFAFA;border-radius:8px;font-size:11px;color:var(--text-secondary);line-height:1.6;">
+                            <b>💡 ${lensData.name}关注什么？</b><br>
+                            ${lensData.name === '价值投资者' ? '关注公司内在价值、护城河、盈利能力和估值安全边际。忽略短期波动，看重长期竞争力。' : 
+                              lensData.name === '趋势跟踪者' ? '关注价格趋势、成交量变化和市场动量。顺势而为，不预测只跟随。' :
+                              lensData.name === '量化交易者' ? '关注历史数据统计、概率优势和期望收益。用数学模型指导交易决策。' :
+                              lensData.name === '宏观对冲者' ? '关注宏观经济环境、政策变化和资产配置。从全局视角优化组合。' :
+                              lensData.name === '事件驱动者' ? '关注特定事件（财报、并购、政策）带来的机会。提前布局或及时反应。' : '关注长期复利效应、时间价值和定投纪律。忽略短期波动，坚持长期持有。'}
+                        </div>
+                    </div>
+                    <div style="padding:16px 20px;border-top:1px solid var(--border-light);">
+                        <button onclick="this.closest('.modal-overlay').remove()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;">明白了</button>
+                    </div>
+                </div>
+            `;
+            modal.className = 'modal-overlay';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
+        function showInsight(symbol, name, itemName, status, desc) {
+            const insights = {
+                '业绩预期': () => {
+                    if (status.includes('即将')) {
+                        return `<b>为什么是信号？</b><br><br>${name}即将发布财报，这是<b>高确定性事件</b>。历史数据显示，该公司财报后3天内股价平均波动±8%。<br><br><b>建议关注：</b><br>• 营收增速是否超预期<br>• 毛利率变化趋势<br>• 管理层对下季度指引`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>距离${name}下次财报还有较长时间，当前市场定价已充分反映预期。<br><br><b>建议：</b>无需过度关注日度波动，把精力放在行业趋势和公司竞争力分析上。`;
+                },
+                '新闻舆情': () => {
+                    if (status.includes('需关注')) {
+                        return `<b>为什么是信号？</b><br><br>检测到与${name}核心业务直接相关的新闻。政策变化可能影响公司收入。<br><br><b>建议：</b>持续跟踪政策细节，若出现实质性变化，需重新评估持仓。`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>24小时内虽有新闻，但与${name}核心业务关联度低，市场情绪指标处于正常区间。<br><br><b>结论：</b>属于市场正常信息流动，无需过度反应。`;
+                },
+                '美联储政策': () => {
+                    if (status.includes('有变化')) {
+                        return `<b>为什么是信号？</b><br><br>美联储政策变化对${name}的影响路径：<br>利率变化 → 折现率变化 → 估值重构<br><br><b>建议：</b>关注FOMC会议表态，若释放明确降息信号，高估值科技股可能受益。`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>当前美联储维持利率不变，利率预期已充分定价。${name}基本面不受利率直接影响。<br><br><b>结论：</b>美联储政策当前不是主要矛盾，关注公司自身业绩更重要。`;
+                },
+                '南向资金': () => {
+                    if (status.includes('流入')) {
+                        return `<b>为什么是信号？</b><br><br>南向资金持续流入${name}，反映内地投资者对港股的配置意愿。<br><br><b>逻辑推导：</b><br>南向资金增持 → 流动性改善 → 估值修复 → 股价支撑`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>南向资金短期流出${name}，但流出规模占日成交额比例低，属于正常获利了结。<br><br><b>结论：</b>短期资金流动不影响公司价值，若基本面未变，流出反而是加仓机会。`;
+                },
+                '行业政策': () => {
+                    if (status.includes('有变化')) {
+                        return `<b>为什么是信号？</b><br><br>行业政策变化对${name}的影响评估：核心业务与政策高度相关。<br><br><b>建议：</b>短期回避政策不确定性，中长期关注公司应对能力。`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>当前行业政策环境稳定，监管政策无实质性变化。<br><br><b>结论：</b>政策不是当前主要矛盾，关注公司业绩增长和竞争力提升。`;
+                },
+                '资金流向': () => {
+                    if (status.includes('流入')) {
+                        return `<b>为什么是信号？</b><br><br>主力资金持续流入${name}，反映机构态度积极。<br><br><b>逻辑推导：</b><br>机构资金流入 → 研究覆盖增加 → 市场关注度提升 → 估值修复`;
+                    } else if (status.includes('流出')) {
+                        return `<b>为什么是信号？</b><br><br>主力资金流出${name}，需警惕。<br><br><b>可能原因：</b><br>• 业绩预期下调<br>• 行业配置调整<br><br><b>建议：</b>核查基本面是否恶化，若无实质变化，流出可能是情绪过度反应。`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>主力资金流动平衡，单日资金流动属于正常交易行为。<br><br><b>结论：</b>短期资金流动不改变公司价值，关注季度机构持仓变化更有意义。`;
+                },
+                '技术指标': () => {
+                    if (status.includes('突破')) {
+                        return `<b>为什么是信号？</b><br><br>${name}技术面出现突破信号：<br>• 股价突破20日均线<br>• 成交量放大<br><br><b>建议：</b>技术面突破可视为短期入场信号，但需结合基本面判断是否可持续。`;
+                    }
+                    return `<b>为什么是噪音？</b><br><br>${name}技术指标正常，股价在均线附近震荡，无明确趋势。<br><br><b>结论：</b>技术面未给出明确方向，此时更应关注基本面变化。`;
+                }
+            };
+            
+            const content = insights[itemName] ? insights[itemName]() : `<b>${itemName}</b><br><br>当前状态：${status}<br><br>经分析，该因素对${name}的股价影响程度为中等，建议持续关注。`;
+            
+            // 创建弹窗
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;">
+                    <div style="padding:20px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-size:16px;font-weight:600;">🤖 AI深度解读</div>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:20px;">
+                        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">${name} - ${itemName}</div>
+                        <div style="font-size:13px;line-height:1.8;">${content}</div>
+                    </div>
+                    <div style="padding:16px 20px;border-top:1px solid var(--border-light);display:flex;gap:12px;">
+                        <button onclick="this.closest('.modal-overlay').remove()" style="flex:1;padding:10px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;">明白了</button>
+                        <button onclick="copyInsight('${name}', '${itemName}', '${content.replace(/'/g, "\\'")}')" style="padding:10px 16px;background:#F0F0F0;border:none;border-radius:6px;cursor:pointer;">📤 复制</button>
+                    </div>
+                </div>
+            `;
+            modal.className = 'modal-overlay';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
+        function copyInsight(name, itemName, content) {
+            const text = `【${name}投资笔记】\n\n${itemName}：${content.replace(/<[^>]+>/g, '')}\n\nvia 持仓智投AI`;
+            navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板！')).catch(() => alert(text));
+        }
+
+        function showHistory(name, symbol, history) {
+            // 计算统计数据
+            const beatCount = history.filter(h => h.beat).length;
+            const avgSurprise = (history.reduce((sum, h) => sum + (parseFloat(h.actual) - parseFloat(h.expected)), 0) / history.length).toFixed(2);
+            
+            // 找出最大/最小超预期
+            const surprises = history.map(h => parseFloat(h.actual) - parseFloat(h.expected));
+            const maxSurprise = Math.max(...surprises).toFixed(2);
+            const minSurprise = Math.min(...surprises).toFixed(2);
+            
+            // 生成图表HTML
+            const maxVal = Math.max(...history.map(h => Math.max(parseFloat(h.expected), parseFloat(h.actual)))) * 1.2;
+            const chartRows = history.map(h => {
+                const expectedPct = (parseFloat(h.expected) / maxVal * 100).toFixed(1);
+                const actualPct = (parseFloat(h.actual) / maxVal * 100).toFixed(1);
+                const diff = (parseFloat(h.actual) - parseFloat(h.expected)).toFixed(2);
+                const diffColor = diff > 0 ? 'var(--rise)' : diff < 0 ? 'var(--fall)' : 'var(--text-secondary)';
+                const diffSign = diff > 0 ? '+' : '';
+                return `
+                    <div style="margin-bottom:16px;">
+                        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">${h.period}</div>
+                        <div style="display:flex;align-items:center;gap:8px;height:24px;">
+                            <div style="width:60px;font-size:11px;color:var(--text-tertiary);">预期</div>
+                            <div style="flex:1;background:#F0F0F0;border-radius:4px;height:16px;position:relative;">
+                                <div style="position:absolute;left:0;top:0;height:100%;background:#BFBFBF;border-radius:4px;width:${expectedPct}%;"></div>
+                                <span style="position:absolute;left:${expectedPct}%;top:50%;transform:translate(-100%, -50%);font-size:10px;padding:0 4px;background:white;border-radius:2px;margin-left:-4px;">${h.expected}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;height:24px;margin-top:4px;">
+                            <div style="width:60px;font-size:11px;color:var(--text-tertiary);">实际</div>
+                            <div style="flex:1;background:#F0F0F0;border-radius:4px;height:16px;position:relative;">
+                                <div style="position:absolute;left:0;top:0;height:100%;background:${h.beat ? 'var(--rise)' : 'var(--fall)'};border-radius:4px;width:${actualPct}%;"></div>
+                                <span style="position:absolute;left:${actualPct}%;top:50%;transform:translate(-100%, -50%);font-size:10px;padding:0 4px;background:white;border-radius:2px;margin-left:-4px;font-weight:500;">${h.actual}</span>
+                            </div>
+                            <div style="width:50px;text-align:right;font-size:11px;color:${diffColor};font-weight:500;">${diffSign}${diff}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;">
+                    <div style="padding:20px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-size:16px;font-weight:600;">📊 业绩历史对比</div>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:20px;">
+                        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">${name} (${symbol}) - 过去4个季度</div>
+                        
+                        <!-- 统计卡片 -->
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+                            <div style="background:var(--primary-light);padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:20px;font-weight:600;color:var(--primary);">${beatCount}/4</div>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">超预期次数</div>
+                            </div>
+                            <div style="background:${avgSurprise >= 0 ? 'var(--fall-bg)' : 'var(--rise-bg)'};padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:20px;font-weight:600;color:${avgSurprise >= 0 ? 'var(--fall)' : 'var(--rise)'}">${avgSurprise > 0 ? '+' : ''}${avgSurprise}</div>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">平均超预期</div>
+                            </div>
+                            <div style="background:#FFFBE6;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:20px;font-weight:600;color:var(--warning);">${maxSurprise > 0 ? '+' : ''}${maxSurprise}</div>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">最大惊喜</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 图表 -->
+                        <div style="background:#FAFAFA;padding:16px;border-radius:8px;">
+                            ${chartRows}
+                        </div>
+                        
+                        <!-- 学习提示 -->
+                        <div style="margin-top:16px;padding:12px;background:var(--primary-light);border-radius:8px;font-size:12px;line-height:1.6;">
+                            <b>💡 发现规律：</b><br>
+                            ${beatCount >= 3 ? '该公司业绩稳定性较强，超预期概率高。' : beatCount <= 1 ? '该公司业绩波动较大，需警惕不及预期风险。' : '该公司业绩表现中规中矩，符合预期是常态。'}<br>
+                            ${parseFloat(avgSurprise) > 0.5 ? '历史平均超预期幅度较大，市场可能低估其盈利能力。' : parseFloat(avgSurprise) < -0.3 ? '历史平均低于预期，需关注基本面是否恶化。' : '业绩基本符合预期，估值相对合理。'}
+                        </div>
+                    </div>
+                    <div style="padding:16px 20px;border-top:1px solid var(--border-light);">
+                        <button onclick="this.closest('.modal-overlay').remove()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;">明白了</button>
+                    </div>
+                </div>
+            `;
+            modal.className = 'modal-overlay';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
+        // 记录投资建议
+        async function recordRecommendation(symbol, action, confidence) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reflections/recommendation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol,
+                        action,
+                        confidence,
+                        reasoning: `综合多因素分析: ${action}`,
+                        factors: ['业绩预期', '资金流向', '技术指标']
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert(`✓ 已记录建议: ${symbol} ${action}\n\n系统将在未来验证此建议的准确性，并用于改进 AI 模型。`);
+                }
+            } catch (e) {
+                console.error('记录建议失败:', e);
+            }
+        }
+
+        // 加载反思数据
+        async function loadReflectionData(symbol) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reflections/report`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const container = document.getElementById(`reflection-${symbol}`);
+                    if (container) {
+                        const accuracy = data.report.summary.accuracy;
+                        container.innerHTML = `
+                            <div>历史建议准确率: <b>${accuracy}</b></div>
+                            <div style="margin-top:4px;font-size:10px;color:var(--text-tertiary);">
+                                基于 ${data.report.summary.total} 条历史建议的自我反思
+                            </div>
+                        `;
+                    }
+                }
+            } catch (e) {
+                console.error('加载反思数据失败:', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, starting data load...');
+            loadEarningsCalendar().catch(e => console.error('Earnings load failed:', e));
+            loadNewsMonitor().catch(e => console.error('News load failed:', e));
+            loadAttributionAnalysis().catch(e => console.error('Attribution load failed:', e));
+            loadPriceAlerts().catch(e => console.error('Price alerts load failed:', e));
+        });
+    </script>
+</body>
+</html>

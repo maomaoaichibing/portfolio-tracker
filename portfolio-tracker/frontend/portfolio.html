@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的持仓 - 持仓智投</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>📈 持仓智投</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">我的持仓</a>
+                <a href="monitor.html">AI监控</a>
+                <a href="analysis.html">智能分析</a>
+                <a href="hot-stocks.html">热门股票</a>
+                <a href="agent.html">🤖 AI Agent</a>
+            </div>
+        </nav>
+
+        <div class="page-header">
+            <h2>📊 我的持仓</h2>
+            <button class="btn-primary" onclick="showUploadModal()">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                上传持仓
+            </button>
+        </div>
+
+        <div class="portfolio-summary" id="portfolioSummary">
+            <div class="summary-card">
+                <div class="summary-label">总市值</div>
+                <div class="summary-value font-number" id="totalValue">--</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">今日盈亏</div>
+                <div class="summary-value font-number" id="todayProfit">--</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">持仓数量</div>
+                <div class="summary-value font-number" id="stockCount">--</div>
+            </div>
+        </div>
+
+        <div class="portfolio-list" id="portfolioList">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 空状态 -->
+    <template id="emptyStateTemplate">
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <h3 class="empty-state-title">还没有持仓</h3>
+            <p class="empty-state-desc">上传持仓截图，AI 将自动识别并为您建立智能监控</p>
+            <button class="btn-primary" onclick="showUploadModal()">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                上传持仓截图
+            </button>
+        </div>
+    </template>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+
+        // 格式化金额
+        function formatAmount(amount) {
+            if (amount === null || amount === undefined) return '--';
+            return '¥' + Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // 格式化涨跌（带+号）
+        function formatChange(value, isPercentage = false) {
+            if (value === null || value === undefined) return '--';
+            const num = Number(value);
+            const sign = num >= 0 ? '+' : '';
+            const suffix = isPercentage ? '%' : '';
+            return sign + num.toFixed(2) + suffix;
+        }
+
+        // 获取涨跌样式类
+        function getChangeClass(value) {
+            const num = Number(value);
+            if (num > 0) return 'text-rise';
+            if (num < 0) return 'text-fall';
+            return '';
+        }
+
+        async function loadPortfolio() {
+            const token = localStorage.getItem('token') || '';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/portfolio`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    document.getElementById('portfolioList').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon" style="background: #FFF1F0;">
+                                <svg style="color: #FF4D4F;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <h3 class="empty-state-title">请先登录</h3>
+                            <p class="empty-state-desc">登录后即可查看和管理您的持仓</p>
+                            <a href="login.html" class="btn-primary">去登录</a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (!result.portfolio || result.portfolio.length === 0) {
+                    const template = document.getElementById('emptyStateTemplate');
+                    document.getElementById('portfolioList').innerHTML = '';
+                    document.getElementById('portfolioList').appendChild(template.content.cloneNode(true));
+                    document.getElementById('stockCount').textContent = '0';
+                    document.getElementById('totalValue').textContent = '¥0.00';
+                    document.getElementById('todayProfit').textContent = '¥0.00';
+                    return;
+                }
+                
+                // 更新统计
+                const totalValue = result.portfolio.reduce((sum, s) => sum + (s.shares * s.price), 0);
+                const totalCost = result.portfolio.reduce((sum, s) => sum + (s.shares * s.cost), 0);
+                const totalProfit = totalValue - totalCost;
+                const profitPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+                
+                document.getElementById('totalValue').textContent = formatAmount(totalValue);
+                
+                const profitEl = document.getElementById('todayProfit');
+                profitEl.textContent = formatChange(totalProfit) + ' (' + formatChange(profitPct, true) + ')';
+                profitEl.className = 'summary-value font-number ' + getChangeClass(totalProfit);
+                
+                document.getElementById('stockCount').textContent = result.portfolio.length;
+                
+                // 渲染持仓列表
+                document.getElementById('portfolioList').innerHTML = result.portfolio.map(stock => {
+                    const marketValue = stock.shares * stock.price;
+                    const costValue = stock.shares * stock.cost;
+                    const profit = marketValue - costValue;
+                    const profitPct = stock.cost > 0 ? ((stock.price - stock.cost) / stock.cost) * 100 : 0;
+                    
+                    return `
+                        <div class="stock-card">
+                            <div class="stock-info">
+                                <div class="stock-name">${stock.name}</div>
+                                <div class="stock-code">${stock.symbol}</div>
+                            </div>
+                            <div class="stock-price">
+                                <div class="price font-number">${formatAmount(stock.price)}</div>
+                                <div class="shares">${stock.shares}股</div>
+                            </div>
+                            <div class="stock-profit">
+                                <div class="profit font-number ${getChangeClass(profit)}">${formatChange(profit)}</div>
+                                <div class="profit-pct ${getChangeClass(profitPct)}">${formatChange(profitPct, true)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                document.getElementById('portfolioList').innerHTML = '<div class="empty-state"><div class="empty-state-title" style="color: #FF4D4F;">加载失败，请稍后重试</div></div>';
+            }
+        }
+
+        // 显示上传模态框（需要与 index.html 保持一致）
+        function showUploadModal() {
+            // 跳转到首页并打开上传模态框
+            window.location.href = 'index.html?action=upload';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPortfolio);
+    </script>
+
+    <style>
+        :root {
+            --primary: #1890FF;
+            --primary-light: #E6F7FF;
+            --rise: #FF4D4F;
+            --rise-bg: #FFF1F0;
+            --fall: #52C41A;
+            --fall-bg: #F6FFED;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8C8C8C;
+            --bg-page: #F5F5F5;
+            --bg-card: #FFFFFF;
+            --border-light: #F0F0F0;
+            --font-number: 'DIN Alternate', 'Roboto Mono', 'SF Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-light);
+            padding: 16px 0;
+            margin-bottom: 24px;
+        }
+
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .nav-links a.active {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        /* 按钮 */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            background: #096DD9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+        }
+
+        /* 统计卡片 */
+        .portfolio-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .summary-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .font-number {
+            font-family: var(--font-number);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        /* 涨跌颜色 - A股红涨绿跌 */
+        .text-rise {
+            color: var(--rise) !important;
+        }
+
+        .text-fall {
+            color: var(--fall) !important;
+        }
+
+        /* 持仓列表 */
+        .portfolio-list {
+            margin-top: 16px;
+        }
+
+        .stock-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .stock-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .stock-info {
+            flex: 1;
+        }
+
+        .stock-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .stock-code {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .stock-price {
+            text-align: right;
+            min-width: 100px;
+        }
+
+        .stock-price .price {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stock-price .shares {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .stock-profit {
+            text-align: right;
+            min-width: 120px;
+            margin-left: 24px;
+        }
+
+        .stock-profit .profit {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .stock-profit .profit-pct {
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .empty-state-icon svg {
+            width: 40px;
+            height: 40px;
+            color: var(--primary);
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-tertiary);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .portfolio-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .summary-value {
+                font-size: 24px;
+            }
+
+            .stock-card {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .stock-profit {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                margin-left: 0;
+                margin-top: 8px;
+                padding-top: 12px;
+                border-top: 1px solid var(--border-light);
+            }
+
+            .stock-profit .profit,
+            .stock-profit .profit-pct {
+                font-size: 14px;
+            }
+        }
+    </style>
+</body>
+</html>
