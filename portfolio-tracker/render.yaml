@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: portfolio-tracker
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: KIMI_API_KEY
+        value: sk-DlknfFqiU2W33YKGJEbU9yXkh8ejpXUFoXHQsbvGy0PejB9r
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
